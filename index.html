@@ -7,194 +7,205 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts/dist/Recharts.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white font-sans">
-    <div id="root"></div>
+    <div id="root">
+        <div class="flex items-center justify-center min-h-screen">
+            <div class="text-center">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-green-500 mb-4"></div>
+                <p class="text-slate-400">Lade Schafkopf Pro...</p>
+            </div>
+        </div>
+    </div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+        const { useState, useEffect, useRef } = React;
 
         function SchafkopfApp() {
+            const [libsReady, setLibsReady] = useState(false);
             const [players, setPlayers] = useState([]);
             const [newPlayerName, setNewPlayerName] = useState('');
             const [gameHistory, setGameHistory] = useState([]);
             const [winners, setWinners] = useState([]);
             const [losers, setLosers] = useState([]);
-            const [pointValue, setPointValue] = useState('10'); // Standard 10ct
-            const [gameMode, setGameMode] = useState('normal'); // 'normal' oder 'solo'
+            const [pointValue, setPointValue] = useState('10');
+            const [gameMode, setGameMode] = useState('normal');
 
-            // Laden & Speichern
+            // 1. Sicherheits-Check: Warten bis Recharts im window-Objekt verfügbar ist
             useEffect(() => {
-                const p = localStorage.getItem('sk_players');
-                const h = localStorage.getItem('sk_history');
+                const checkLibs = setInterval(() => {
+                    if (window.Recharts) {
+                        setLibsReady(true);
+                        clearInterval(checkLibs);
+                    }
+                }, 100);
+                return () => clearInterval(checkLibs);
+            }, []);
+
+            // 2. Daten laden
+            useEffect(() => {
+                const p = localStorage.getItem('sk_players_v2');
+                const h = localStorage.getItem('sk_history_v2');
                 if (p) setPlayers(JSON.parse(p));
                 if (h) setGameHistory(JSON.parse(h));
             }, []);
 
+            // 3. Daten speichern
             useEffect(() => {
-                localStorage.setItem('sk_players', JSON.stringify(players));
-                localStorage.setItem('sk_history', JSON.stringify(gameHistory));
+                if (players.length > 0) {
+                    localStorage.setItem('sk_players_v2', JSON.stringify(players));
+                }
+                localStorage.setItem('sk_history_v2', JSON.stringify(gameHistory));
             }, [players, gameHistory]);
+
+            if (!libsReady) return (
+                <div class="flex items-center justify-center min-h-screen">
+                    <p class="animate-pulse text-green-500">Initialisiere Diagramme...</p>
+                </div>
+            );
+
+            // Recharts Komponenten sicher laden
+            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
 
             const addPlayer = () => {
                 if (newPlayerName.trim() && players.length < 6) {
-                    setPlayers([...players, { name: newPlayerName.trim(), points: 0, history: [{round: 0, points: 0}] }]);
+                    const newP = { name: newPlayerName.trim(), points: 0, history: [{round: 0, points: 0}] };
+                    setPlayers([...players, newP]);
                     setNewPlayerName('');
                 }
             };
 
-            const kickPlayer = (index) => {
-                if(confirm(`Spieler ${players[index].name} wirklich entfernen?`)) {
-                    setPlayers(players.filter((_, i) => i !== index));
+            const kickPlayer = (idx) => {
+                if(confirm(`${players[idx].name} wirklich löschen?`)) {
+                    const newPlayers = players.filter((_, i) => i !== idx);
+                    setPlayers(newPlayers);
                     setWinners([]);
                     setLosers([]);
                 }
             };
 
-            const toggleWinner = (name) => {
-                if (losers.includes(name)) return;
-                setWinners(winners.includes(name) ? winners.filter(n => n !== name) : [...winners, name]);
+            const toggleWinner = (n) => {
+                if (losers.includes(n)) return;
+                setWinners(winners.includes(n) ? winners.filter(x => x !== n) : [...winners, n]);
             };
 
-            const toggleLoser = (name) => {
-                if (winners.includes(name)) return;
-                setLosers(losers.includes(name) ? losers.filter(n => n !== name) : [...losers, name]);
+            const toggleLoser = (n) => {
+                if (winners.includes(n)) return;
+                setLosers(losers.includes(n) ? losers.filter(x => x !== n) : [...losers, n]);
             };
 
             const recordGame = () => {
                 const val = parseInt(pointValue);
-                if (!val || winners.length === 0 || losers.length === 0) {
-                    alert("Bitte Gewinner, Verlierer und Punkte eingeben!");
-                    return;
-                }
+                if (!val || winners.length === 0 || losers.length === 0) return alert("Gewinner/Verlierer wählen!");
 
                 const newPlayers = players.map(p => {
                     let change = 0;
                     if (gameMode === 'normal') {
-                        // Sauspiel: Jeder Gewinner kriegt den Wert, jeder Verlierer zahlt den Wert
                         if (winners.includes(p.name)) change = val;
                         if (losers.includes(p.name)) change = -val;
                     } else {
-                        // Solo: Einzelsieger kriegt von allen Verlierern (Anzahl Verlierer * Wert)
-                        // Einzelverlierer zahlt an alle Gewinner (Anzahl Gewinner * Wert)
+                        // SOLO LOGIK
                         if (winners.length === 1 && winners.includes(p.name)) change = val * losers.length;
                         else if (winners.length === 1 && losers.includes(p.name)) change = -val;
                         
                         if (losers.length === 1 && losers.includes(p.name)) change = -(val * winners.length);
                         else if (losers.length === 1 && winners.includes(p.name)) change = val;
                     }
-
                     const newPoints = p.points + change;
-                    return {
-                        ...p,
-                        points: newPoints,
-                        history: [...p.history, { round: gameHistory.length + 1, points: newPoints }]
-                    };
+                    return { ...p, points: newPoints, history: [...p.history, { round: gameHistory.length + 1, points: newPoints }] };
                 });
 
                 setPlayers(newPlayers);
-                setGameHistory([...gameHistory, { winners, losers, val, mode: gameMode, time: new Date().toLocaleTimeString() }]);
-                setWinners([]);
-                setLosers([]);
+                setGameHistory([...gameHistory, { winners, losers, val, mode: gameMode }]);
+                setWinners([]); setLosers([]);
             };
 
             const getChartData = () => {
-                const data = [];
-                const maxRounds = gameHistory.length;
-                for (let i = 0; i <= maxRounds; i++) {
+                return Array.from({ length: gameHistory.length + 1 }, (_, i) => {
                     const entry = { name: i };
                     players.forEach(p => {
                         const h = p.history.find(rh => rh.round === i) || p.history.filter(rh => rh.round < i).pop();
                         entry[p.name] = h ? h.points : 0;
                     });
-                    data.push(entry);
-                }
-                return data;
+                    return entry;
+                });
             };
 
             return (
-                <div className="max-w-5xl mx-auto p-4 space-y-6 pb-20">
-                    <header className="text-center py-6 border-b border-white/10">
-                        <h1 className="text-4xl font-black text-green-400 tracking-tighter">SCHAFKOPF PRO</h1>
+                <div className="max-w-5xl mx-auto p-4 space-y-6 pb-10">
+                    <header className="flex justify-between items-center py-6 border-b border-white/10">
+                        <h1 className="text-3xl font-black text-green-500 tracking-tighter">SCHAFKOPF PRO</h1>
+                        <button onClick={() => {if(confirm('Alles löschen?')){localStorage.clear(); location.reload();}}} className="text-red-500 text-xs uppercase font-bold bg-red-500/10 px-3 py-1 rounded-lg">Reset</button>
                     </header>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Spieler-Liste */}
-                        <section className="bg-slate-800 p-6 rounded-3xl shadow-2xl space-y-4 border border-white/5">
-                            <h2 className="text-xl font-bold flex justify-between items-center">
-                                <span>Spieler</span>
-                                <span className="text-xs text-slate-400 font-normal uppercase tracking-widest">{players.length}/6</span>
-                            </h2>
+                        {/* SPIELER LISTE */}
+                        <div className="bg-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                            <h2 className="text-xl font-bold">Spieler ({players.length}/6)</h2>
                             <div className="flex gap-2">
-                                <input className="flex-1 bg-slate-900 border-none rounded-xl p-3 focus:ring-2 focus:ring-green-500" placeholder="Name..." value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} />
-                                <button onClick={addPlayer} className="bg-green-600 w-12 rounded-xl font-bold hover:bg-green-500 transition-colors">+</button>
+                                <input className="flex-1 bg-slate-900 rounded-xl p-3" placeholder="Name..." value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} />
+                                <button onClick={addPlayer} className="bg-green-600 px-4 rounded-xl font-bold">+</button>
                             </div>
                             <div className="space-y-2">
                                 {players.map((p, i) => (
                                     <div key={i} className="flex items-center justify-between bg-slate-900/50 p-3 rounded-2xl group">
                                         <div className="flex items-center gap-3">
-                                            <button onClick={() => kickPlayer(i)} className="text-red-900 hover:text-red-500 font-bold px-2">✕</button>
+                                            <button onClick={() => kickPlayer(i)} className="text-red-800 hover:text-red-500 transition-colors font-bold">✕</button>
                                             <span className="font-semibold">{p.name}</span>
                                         </div>
-                                        <span className={`font-mono font-bold ${p.points >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {(p.points/100).toFixed(2)}€
-                                        </span>
+                                        <span className={`font-bold ${p.points >= 0 ? 'text-green-400' : 'text-red-400'}`}>{(p.points/100).toFixed(2)}€</span>
                                     </div>
                                 ))}
                             </div>
-                        </section>
+                        </div>
 
-                        {/* Spiel-Eingabe */}
-                        <section className="lg:col-span-2 bg-slate-800 p-6 rounded-3xl shadow-2xl border border-white/5 space-y-6">
+                        {/* EINGABE */}
+                        <div className="lg:col-span-2 bg-slate-800 p-6 rounded-3xl shadow-xl space-y-6">
                             <div className="flex p-1 bg-slate-900 rounded-2xl">
-                                <button onClick={() => setGameMode('normal')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${gameMode === 'normal' ? 'bg-green-600 text-white shadow-lg' : 'text-slate-500'}`}>Sauspiel (2vs2)</button>
-                                <button onClick={() => setGameMode('solo')} className={`flex-1 py-3 rounded-xl font-bold transition-all ${gameMode === 'solo' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-500'}`}>Solo (1vs3)</button>
+                                <button onClick={() => setGameMode('normal')} className={`flex-1 py-3 rounded-xl font-bold ${gameMode === 'normal' ? 'bg-green-600' : 'text-slate-500'}`}>Sauspiel</button>
+                                <button onClick={() => setGameMode('solo')} className={`flex-1 py-3 rounded-xl font-bold ${gameMode === 'solo' ? 'bg-purple-600' : 'text-slate-500'}`}>Solo / Wenz</button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-green-900/20 p-4 rounded-2xl border border-green-500/20">
-                                    <h3 className="text-green-400 text-xs font-black uppercase mb-3 tracking-widest">Gewinner</h3>
-                                    <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-center">
+                                <div className="space-y-2 bg-green-900/10 p-4 rounded-2xl border border-green-500/10">
+                                    <p className="text-[10px] uppercase font-black text-green-500">Gewinner</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
                                         {players.map(p => (
-                                            <button key={p.name} onClick={() => toggleWinner(p.name)} className={`px-4 py-2 rounded-xl font-bold border-2 transition-all ${winners.includes(p.name) ? 'bg-green-600 border-green-400 scale-105' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
+                                            <button key={p.name} onClick={() => toggleWinner(p.name)} className={`px-4 py-2 rounded-xl font-bold border-2 transition-all ${winners.includes(p.name) ? 'bg-green-600 border-green-400' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
                                         ))}
                                     </div>
                                 </div>
-                                <div className="bg-red-900/20 p-4 rounded-2xl border border-red-500/20">
-                                    <h3 className="text-red-400 text-xs font-black uppercase mb-3 tracking-widest">Verlierer</h3>
-                                    <div className="flex flex-wrap gap-2">
+                                <div className="space-y-2 bg-red-900/10 p-4 rounded-2xl border border-red-500/10">
+                                    <p className="text-[10px] uppercase font-black text-red-500">Verlierer</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
                                         {players.map(p => (
-                                            <button key={p.name} onClick={() => toggleLoser(p.name)} className={`px-4 py-2 rounded-xl font-bold border-2 transition-all ${losers.includes(p.name) ? 'bg-red-600 border-red-400 scale-105' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
+                                            <button key={p.name} onClick={() => toggleLoser(p.name)} className={`px-4 py-2 rounded-xl font-bold border-2 transition-all ${losers.includes(p.name) ? 'bg-red-600 border-red-400' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-4 items-center">
-                                <div className="flex-1">
-                                    <label className="text-[10px] text-slate-500 uppercase font-black ml-2">Punkte (ct)</label>
-                                    <input type="number" className="w-full bg-slate-900 border-none rounded-xl p-4 text-2xl font-black text-center" value={pointValue} onChange={e => setPointValue(e.target.value)} />
-                                </div>
-                                <button onClick={recordGame} className="flex-[2] bg-white text-slate-900 h-16 mt-4 rounded-2xl font-black text-xl hover:bg-green-400 transition-colors shadow-xl">EINTRAGEN</button>
+                            <div className="flex gap-4">
+                                <input type="number" className="w-24 bg-slate-900 rounded-xl p-4 text-2xl font-black text-center" value={pointValue} onChange={e => setPointValue(e.target.value)} />
+                                <button onClick={recordGame} className="flex-1 bg-white text-slate-900 rounded-xl font-black text-xl hover:bg-green-400 transition-colors">SPIEL SPEICHERN</button>
                             </div>
-                        </section>
+                        </div>
                     </div>
 
-                    {/* Chart */}
+                    {/* CHART */}
                     {gameHistory.length > 0 && (
-                        <div className="bg-slate-800 p-6 rounded-3xl shadow-2xl border border-white/5 h-80">
+                        <div className="bg-slate-800 p-6 rounded-3xl h-80 shadow-xl border border-white/5">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={getChartData()}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#475569" fontSize={12} />
-                                    <YAxis stroke="#475569" fontSize={12} />
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#444" fontSize={10} />
+                                    <YAxis stroke="#444" fontSize={10} />
                                     <Tooltip contentStyle={{backgroundColor: '#0f172a', border: 'none', borderRadius: '12px'}} />
                                     <Legend />
                                     {players.map((p, i) => (
-                                        <Line key={p.name} type="stepAfter" dataKey={p.name} stroke={['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'][i % 6]} strokeWidth={4} dot={false} />
+                                        <Line key={p.name} type="monotone" dataKey={p.name} stroke={['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'][i % 6]} strokeWidth={3} dot={false} />
                                     ))}
                                 </LineChart>
                             </ResponsiveContainer>
