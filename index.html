@@ -42,7 +42,6 @@
             // 1. Sicherheit: Warten bis Recharts im Browser bereit ist
             useEffect(() => {
                 const check = setInterval(() => {
-                    // Prüfen ob Recharts global verfügbar ist
                     if (window.Recharts) {
                         setReady(true);
                         clearInterval(check);
@@ -73,7 +72,6 @@
 
             if (!ready) return null;
 
-            // Destructuring erst wenn ready = true
             const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
 
             const addPlayer = () => {
@@ -253,11 +251,11 @@
                                     {players.map((p, i) => (
                                         <Line 
                                             key={p.name} 
-                                            type="stepAfter" 
+                                            type="linear" 
                                             dataKey={p.name} 
                                             stroke={['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'][i % 6]} 
-                                            strokeWidth={4} 
-                                            dot={{ r: 0 }} 
+                                            strokeWidth={3} 
+                                            dot={{ r: 4, strokeWidth: 0, fill: '#fff' }} 
                                             activeDot={{ r: 6, strokeWidth: 0 }}
                                             animationDuration={1000}
                                         />
