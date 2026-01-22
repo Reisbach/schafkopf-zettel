@@ -1,166 +1,202 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schafkopf Abrechnung Pro</title>
-
-  <!-- React 18 -->
-  <script defer src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-  <!-- Recharts -->
-  <script defer src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
-
-  <!-- Babel (Demo-only) -->
-  <script defer src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schafkopf Abrechnung Pro</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .loading-spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #22c55e; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
-
-<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
-  <div id="root" class="min-h-screen"></div>
-
-  <script type="text/babel">
-    const { useState, useEffect, useMemo } = React;
-
-    function SchafkopfApp() {
-      
-
-      /* ---------- Load ---------- */
-      useEffect(() => {
-        const p = localStorage.getItem('sk_players_v2');
-        const h = localStorage.getItem('sk_history_v2');
-        if (p) setPlayers(JSON.parse(p));
-        if (h) setGameHistory(JSON.parse(h));
-      }, []);
-
-      /* ---------- Save ---------- */
-      useEffect(() => {
-        localStorage.setItem('sk_players_v2', JSON.stringify(players));
-        localStorage.setItem('sk_history_v2', JSON.stringify(gameHistory));
-      }, [players, gameHistory]);
-
-      /* ---------- Spiellogik (unverändert) ---------- */
-      const addPlayer = () => {
-        if (!newPlayerName.trim() || players.length >= 6) return;
-        setPlayers([...players, { name: newPlayerName.trim(), points: 0, history: [{ round: 0, points: 0 }] }]);
-        setNewPlayerName('');
-      };
-
-      const toggleWinner = (n) => {
-        if (losers.includes(n)) return;
-        setWinners(winners.includes(n) ? winners.filter(x => x !== n) : [...winners, n]);
-      };
-
-      const toggleLoser = (n) => {
-        if (winners.includes(n)) return;
-        setLosers(losers.includes(n) ? losers.filter(x => x !== n) : [...losers, n]);
-      };
-
-      const recordGame = () => {
-        const val = parseInt(pointValue);
-        if (!val || winners.length === 0 || losers.length === 0) return alert('Gewinner/Verlierer wählen');
-
-        const newPlayers = players.map(p => {
-          let change = 0;
-          if (gameMode === 'normal') {
-            if (winners.includes(p.name)) change = val;
-            if (losers.includes(p.name)) change = -val;
-          } else {
-            if (winners.length === 1 && winners.includes(p.name)) change = val * losers.length;
-            else if (winners.length === 1 && losers.includes(p.name)) change = -val;
-
-            if (losers.length === 1 && losers.includes(p.name)) change = -(val * winners.length);
-            else if (losers.length === 1 && winners.includes(p.name)) change = val;
-          }
-          const newPoints = p.points + change;
-          return { ...p, points: newPoints, history: [...p.history, { round: gameHistory.length + 1, points: newPoints }] };
-        });
-
-        setPlayers(newPlayers);
-        setGameHistory([...gameHistory, { winners, losers, val, mode: gameMode }]);
-        setWinners([]); setLosers([]);
-      };
-
-      const chartData = useMemo(() => {
-        return Array.from({ length: gameHistory.length + 1 }, (_, i) => {
-          const row = { round: i };
-          players.forEach(p => {
-            const h = p.history.find(r => r.round === i) || p.history[p.history.length - 1];
-            row[p.name] = h?.points ?? 0;
-          });
-          return row;
-        });
-      }, [players, gameHistory]);
-
-      
-
-      
-
-      return (
-        <div className="max-w-6xl mx-auto p-6 space-y-8">
-          <header className="flex justify-between items-center">
-            <h1 className="text-4xl font-extrabold text-emerald-400">Schafkopf Pro</h1>
-            <button onClick={() => { if (confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }}
-              className="px-4 py-2 rounded-xl text-red-400 bg-red-500/10">Reset</button>
-          </header>
-
-          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-slate-800/70 rounded-3xl p-6 space-y-4">
-              <h2 className="font-bold">Spieler</h2>
-              <div className="flex gap-2">
-                <input value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} className="flex-1 bg-slate-900 rounded-xl px-4 py-2" />
-                <button onClick={addPlayer} className="bg-emerald-600 px-4 rounded-xl font-bold">+</button>
-              </div>
-              {players.map(p => (
-                <div key={p.name} className="flex justify-between bg-slate-900/50 px-4 py-2 rounded-xl">
-                  <span>{p.name}</span>
-                  <span className={p.points >= 0 ? 'text-emerald-400' : 'text-red-400'}>{(p.points/100).toFixed(2)}€</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="lg:col-span-2 bg-slate-800/70 rounded-3xl p-6 space-y-6">
-              <div className="flex bg-slate-900 rounded-2xl p-1">
-                <button onClick={() => setGameMode('normal')} className={`flex-1 py-2 rounded-xl ${gameMode==='normal'?'bg-emerald-600':''}`}>Sauspiel</button>
-                <button onClick={() => setGameMode('solo')} className={`flex-1 py-2 rounded-xl ${gameMode==='solo'?'bg-purple-600':''}`}>Solo</button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {[['Gewinner', winners, toggleWinner, 'emerald'], ['Verlierer', losers, toggleLoser, 'red']].map(([label, list, fn, color]) => (
-                  <div key={label} className="rounded-2xl p-4 bg-slate-900/40">
-                    <p className={`text-${color}-400 font-bold text-xs uppercase`}>{label}</p>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {players.map(p => (
-                        <button key={p.name} onClick={() => fn(p.name)}
-                          className={`px-3 py-1 rounded-xl border ${list.includes(p.name)?`bg-${color}-600 border-${color}-400`:'border-slate-700 text-slate-500'}`}>
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-4">
-                <input type="number" value={pointValue} onChange={e=>setPointValue(e.target.value)} className="w-24 text-center text-xl bg-slate-900 rounded-xl" />
-                <button onClick={recordGame} className="flex-1 bg-white text-slate-900 rounded-xl font-bold">Spiel speichern</button>
-              </div>
-            </div>
-          </section>
-
-          
-                </LineChart>
-              </ResponsiveContainer>
-            </section>
-          )}
+<body class="bg-slate-900 text-white">
+    <div id="root">
+        <div class="flex flex-col items-center justify-center min-h-screen">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-slate-400 font-medium">Lade Schafkopf-Logik...</p>
         </div>
-      );
-    }
+    </div>
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<SchafkopfApp />);
-  </script>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        function SchafkopfApp() {
+            const [ready, setReady] = useState(false);
+            const [players, setPlayers] = useState([]);
+            const [newPlayerName, setNewPlayerName] = useState('');
+            const [gameHistory, setGameHistory] = useState([]);
+            const [winners, setWinners] = useState([]);
+            const [losers, setLosers] = useState([]);
+            const [pointValue, setPointValue] = useState('10');
+            const [gameMode, setGameMode] = useState('normal');
+
+            // 1. Sicherheitsschleife: Warten bis Recharts im Browser-Speicher ist
+            useEffect(() => {
+                const checkInterval = setInterval(() => {
+                    if (window.Recharts) {
+                        setReady(true);
+                        clearInterval(checkInterval);
+                    }
+                }, 100);
+                return () => clearInterval(checkInterval);
+            }, []);
+
+            // 2. Daten laden
+            useEffect(() => {
+                const p = localStorage.getItem('sk_players_v3');
+                const h = localStorage.getItem('sk_history_v3');
+                if (p) setPlayers(JSON.parse(p));
+                if (h) setGameHistory(JSON.parse(h));
+            }, []);
+
+            // 3. Daten speichern
+            useEffect(() => {
+                if (players.length > 0) localStorage.setItem('sk_players_v3', JSON.stringify(players));
+                localStorage.setItem('sk_history_v3', JSON.stringify(gameHistory));
+            }, [players, gameHistory]);
+
+            if (!ready) return null;
+
+            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
+
+            const addPlayer = () => {
+                if (newPlayerName.trim() && players.length < 6) {
+                    setPlayers([...players, { name: newPlayerName.trim(), points: 0, history: [{round: 0, points: 0}] }]);
+                    setNewPlayerName('');
+                }
+            };
+
+            const kickPlayer = (idx) => {
+                if(confirm(`${players[idx].name} wirklich löschen?`)) {
+                    setPlayers(players.filter((_, i) => i !== idx));
+                    setWinners([]); setLosers([]);
+                }
+            };
+
+            const recordGame = () => {
+                const val = parseInt(pointValue);
+                if (!val || winners.length === 0 || losers.length === 0) return alert("Gewinner & Verlierer wählen!");
+
+                const newPlayers = players.map(p => {
+                    let change = 0;
+                    if (gameMode === 'normal') {
+                        if (winners.includes(p.name)) change = val;
+                        if (losers.includes(p.name)) change = -val;
+                    } else {
+                        // SOLO LOGIK: 1 gegen 3
+                        if (winners.length === 1 && winners.includes(p.name)) change = val * losers.length;
+                        else if (winners.length === 1 && losers.includes(p.name)) change = -val;
+                        
+                        if (losers.length === 1 && losers.includes(p.name)) change = -(val * winners.length);
+                        else if (losers.length === 1 && winners.includes(p.name)) change = val;
+                    }
+                    const newPoints = p.points + change;
+                    return { ...p, points: newPoints, history: [...p.history, { round: gameHistory.length + 1, points: newPoints }] };
+                });
+
+                setPlayers(newPlayers);
+                setGameHistory([...gameHistory, { winners, losers, val, mode: gameMode }]);
+                setWinners([]); setLosers([]);
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
+                    <div className="flex justify-between items-center border-b border-white/10 pb-6">
+                        <h1 className="text-3xl font-black text-green-500 italic">SCHAFKOPF PRO</h1>
+                        <button onClick={() => {if(confirm('Alles löschen?')){localStorage.clear(); location.reload();}}} className="text-red-500 text-xs font-bold border border-red-500/30 px-3 py-1 rounded">RESET</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Spielerliste mit Kick-Funktion */}
+                        <div className="bg-slate-800 p-6 rounded-3xl shadow-xl space-y-4">
+                            <h2 className="text-lg font-bold">Spieler</h2>
+                            <div className="flex gap-2">
+                                <input className="flex-1 bg-slate-900 rounded-lg p-2 text-sm border border-slate-700" placeholder="Name..." value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} />
+                                <button onClick={addPlayer} className="bg-green-600 px-4 rounded-lg font-bold">+</button>
+                            </div>
+                            <div className="space-y-2">
+                                {players.map((p, i) => (
+                                    <div key={i} className="flex items-center justify-between bg-slate-900/50 p-3 rounded-xl border border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => kickPlayer(i)} className="text-red-500 hover:scale-125 transition-transform text-sm">✕</button>
+                                            <span className="font-medium text-sm">{p.name}</span>
+                                        </div>
+                                        <span className={`font-bold ${p.points >= 0 ? 'text-green-400' : 'text-red-400'}`}>{(p.points/100).toFixed(2)}€</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Eingabebereich für Sauspiel/Solo */}
+                        <div className="lg:col-span-2 bg-slate-800 p-6 rounded-3xl shadow-xl space-y-6">
+                            <div className="flex bg-slate-900 p-1 rounded-xl">
+                                <button onClick={() => {setGameMode('normal'); setWinners([]); setLosers([]);}} className={`flex-1 py-2 rounded-lg text-sm font-bold ${gameMode === 'normal' ? 'bg-green-600 shadow-lg' : 'text-slate-500'}`}>Sauspiel (2vs2)</button>
+                                <button onClick={() => {setGameMode('solo'); setWinners([]); setLosers([]);}} className={`flex-1 py-2 rounded-lg text-sm font-bold ${gameMode === 'solo' ? 'bg-purple-600 shadow-lg' : 'text-slate-500'}`}>Solo (1vs3)</button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-3 p-4 bg-green-500/5 rounded-2xl border border-green-500/10">
+                                    <p className="text-[10px] text-green-500 font-black uppercase text-center">Gewinner</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {players.map(p => (
+                                            <button key={p.name} onClick={() => winners.includes(p.name) ? setWinners(winners.filter(x => x !== p.name)) : setWinners([...winners, p.name])} className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${winners.includes(p.name) ? 'bg-green-600 border-green-400' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-3 p-4 bg-red-500/5 rounded-2xl border border-red-500/10">
+                                    <p className="text-[10px] text-red-500 font-black uppercase text-center">Verlierer</p>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                        {players.map(p => (
+                                            <button key={p.name} onClick={() => losers.includes(p.name) ? setLosers(losers.filter(x => x !== p.name)) : setLosers([...losers, p.name])} className={`px-3 py-1 rounded-lg text-xs font-bold border transition-all ${losers.includes(p.name) ? 'bg-red-600 border-red-400' : 'border-slate-700 text-slate-500'}`}>{p.name}</button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="w-24">
+                                    <input type="number" className="w-full bg-slate-900 rounded-xl p-3 text-xl font-black text-center border border-slate-700" value={pointValue} onChange={e => setPointValue(e.target.value)} />
+                                    <p className="text-[8px] text-center mt-1 text-slate-500 uppercase">Cent</p>
+                                </div>
+                                <button onClick={recordGame} className="flex-1 bg-white text-slate-900 rounded-xl font-black text-lg hover:bg-green-400 transition-colors shadow-lg active:scale-95">EINTRAGEN</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chart */}
+                    {gameHistory.length > 0 && (
+                        <div className="bg-slate-800 p-6 rounded-3xl h-80 shadow-2xl border border-white/5">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={Array.from({ length: gameHistory.length + 1 }, (_, i) => {
+                                    const entry = { name: i };
+                                    players.forEach(p => {
+                                        const h = p.history.find(rh => rh.round === i) || p.history.filter(rh => rh.round < i).pop();
+                                        entry[p.name] = h ? h.points : 0;
+                                    });
+                                    return entry;
+                                })}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#222" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#444" fontSize={10} />
+                                    <YAxis stroke="#444" fontSize={10} />
+                                    <Tooltip contentStyle={{backgroundColor: '#0f172a', border: 'none', borderRadius: '12px', fontSize: '12px'}} />
+                                    {players.map((p, i) => (
+                                        <Line key={p.name} type="stepAfter" dataKey={p.name} stroke={['#4ade80', '#f87171', '#60a5fa', '#fbbf24', '#a78bfa', '#f472b6'][i % 6]} strokeWidth={3} dot={false} />
+                                    ))}
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SchafkopfApp />);
+    </script>
 </body>
 </html>
