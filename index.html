@@ -3,26 +3,18 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Schafkopf – Berlin</title>
+    <title>Schafkopf Pro – Finanzausgleich</title>
     
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
-    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
-    
-    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-    
+    <script src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen">
     <div id="root">
-        <div class="flex items-center justify-center min-h-screen">
-            <div class="text-center space-y-4">
-                <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <p class="text-slate-500 font-bold uppercase tracking-widest text-sm">System wird kalibriert...</p>
-            </div>
+        <div class="flex items-center justify-center min-h-screen font-sans uppercase tracking-widest text-slate-500">
+            System wird kalibriert...
         </div>
     </div>
 
@@ -38,91 +30,71 @@
             const [points, setPoints] = useState('10');
             const [mode, setMode] = useState('normal'); 
             const [gameCount, setGameCount] = useState(0);
+            const [showSettlement, setShowSettlement] = useState(false);
 
-            // 1. Sicherheit: Warten bis Recharts im Browser bereit ist
             useEffect(() => {
                 const check = setInterval(() => {
-                    if (window.Recharts) {
-                        setReady(true);
-                        clearInterval(check);
-                    }
+                    if (window.Recharts) { setReady(true); clearInterval(check); }
                 }, 100);
                 return () => clearInterval(check);
             }, []);
 
-            // 2. Daten laden
             useEffect(() => {
-                try {
-                    const p = localStorage.getItem('sk_final_players');
-                    const c = localStorage.getItem('sk_final_count');
-                    if (p) setPlayers(JSON.parse(p));
-                    if (c) setGameCount(parseInt(c));
-                } catch (e) {
-                    console.error("Ladefehler:", e);
-                }
+                const p = localStorage.getItem('sk_pro_players_v4');
+                const c = localStorage.getItem('sk_pro_count_v4');
+                if (p) setPlayers(JSON.parse(p));
+                if (c) setGameCount(parseInt(c));
             }, []);
 
-            // 3. Daten speichern
             useEffect(() => {
-                if (players.length > 0) {
-                    localStorage.setItem('sk_final_players', JSON.stringify(players));
-                    localStorage.setItem('sk_final_count', gameCount.toString());
+                if (players.length > 0 || gameCount > 0) {
+                    localStorage.setItem('sk_pro_players_v4', JSON.stringify(players));
+                    localStorage.setItem('sk_pro_count_v4', gameCount.toString());
                 }
             }, [players, gameCount]);
 
             if (!ready) return null;
-
             const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
 
             const addPlayer = () => {
-                if (!name.trim() || players.length >= 6) return;
-                setPlayers([...players, { 
-                    name: name.trim(), 
-                    points: 0, 
-                    history: [{ round: 0, val: 0 }] 
-                }]);
+                if (!name.trim() || players.length >= 8) return;
+                setPlayers([...players, { name: name.trim(), points: 0, history: [{ round: gameCount, val: 0 }] }]);
                 setName('');
             };
 
-            const kickPlayer = (idx) => {
-                if (confirm(`${players[idx].name} wirklich entfernen?`)) {
+            const settleAndKick = (idx) => {
+                const leaver = players[idx];
+                if (leaver.points === 0) {
                     setPlayers(players.filter((_, i) => i !== idx));
+                    return;
+                }
+
+                const action = leaver.points > 0 ? "erhält" : "zahlt";
+                if (confirm(`Abrechnung für ${leaver.name}: Er ${action} ${(Math.abs(leaver.points)/100).toFixed(2)}€. Dieser Betrag wird auf alle anderen Spieler umgelegt.`)) {
+                    const nextRound = gameCount + 1;
+                    const adjustment = leaver.points / (players.length - 1);
+                    
+                    const updatedPlayers = players
+                        .filter((_, i) => i !== idx)
+                        .map(p => {
+                            const newVal = p.points - adjustment;
+                            return { 
+                                ...p, 
+                                points: newVal, 
+                                history: [...p.history, { round: nextRound, val: newVal }] 
+                            };
+                        });
+                    
+                    setPlayers(updatedPlayers);
+                    setGameCount(nextRound);
                     setWinners([]); setLosers([]);
-                }
-            };
-
-            const toggleWinner = (pName) => {
-                if (losers.includes(pName)) return;
-                if (winners.includes(pName)) {
-                    setWinners(winners.filter(x => x !== pName));
-                } else {
-                    if (mode === 'normal' && winners.length < 2) setWinners([...winners, pName]);
-                    if (mode === 'solo' && (winners.length + losers.length < 4) && winners.length < 3) {
-                        setWinners([...winners, pName]);
-                    }
-                }
-            };
-
-            const toggleLoser = (pName) => {
-                if (winners.includes(pName)) return;
-                if (losers.includes(pName)) {
-                    setLosers(losers.filter(x => x !== pName));
-                } else {
-                    if (mode === 'normal' && losers.length < 2) setLosers([...losers, pName]);
-                    if (mode === 'solo' && (winners.length + losers.length < 4) && losers.length < 3) {
-                        setLosers([...losers, pName]);
-                    }
                 }
             };
 
             const recordGame = () => {
                 const val = parseInt(points);
-                if (mode === 'normal' && (winners.length !== 2 || losers.length !== 2)) {
-                    return alert("Sauspiel: Wähle genau 2 Gewinner und 2 Verlierer!");
-                }
-                if (mode === 'solo' && !((winners.length === 1 && losers.length === 3) || (winners.length === 3 && losers.length === 1))) {
-                    return alert("Solo: Wähle 1 gegen 3 Spieler!");
-                }
+                if (mode === 'normal' && (winners.length !== 2 || losers.length !== 2)) return alert("2 vs 2 wählen!");
+                if (mode === 'solo' && (winners.length + losers.length !== 4)) return alert("Solo: 1 vs 3 (insg. 4 Spieler)!");
 
                 const nextRound = gameCount + 1;
                 const newPlayers = players.map(p => {
@@ -145,20 +117,6 @@
                 setWinners([]); setLosers([]);
             };
 
-            const undoLast = () => {
-                if (gameCount === 0) return;
-                if (confirm("Letztes Spiel wirklich rückgängig machen?")) {
-                    const prevRound = gameCount - 1;
-                    const revertedPlayers = players.map(p => ({
-                        ...p,
-                        history: p.history.filter(h => h.round <= prevRound),
-                        points: (p.history.find(h => h.round === prevRound) || {val: 0}).val
-                    }));
-                    setPlayers(revertedPlayers);
-                    setGameCount(prevRound);
-                }
-            };
-
             const chartData = Array.from({ length: gameCount + 1 }, (_, i) => {
                 const row = { name: i };
                 players.forEach(p => {
@@ -169,28 +127,44 @@
             });
 
             return (
-                <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20">
+                <div className="max-w-4xl mx-auto p-4 space-y-6 pb-20 font-sans">
                     <header className="flex justify-between items-center py-6 border-b border-white/5">
-                        <h1 className="text-3xl font-black text-emerald-500 tracking-tighter italic">SCHAFKOPF Berlin-Version</h1>
-                        <div className="flex gap-2">
-                            <button onClick={undoLast} className="text-[10px] text-amber-500 border border-amber-500/20 px-2 py-1 rounded hover:bg-amber-500/10">UNDO</button>
-                            <button onClick={() => {if(confirm("Alles löschen?")) { localStorage.clear(); location.reload(); }}} className="text-[10px] text-red-500 border border-red-500/20 px-2 py-1 rounded hover:bg-red-500/10">RESET</button>
+                        <h1 className="text-3xl font-black text-emerald-500 tracking-tighter italic uppercase">Schafkopf Pro</h1>
+                        <div className="flex gap-3">
+                            {players.length === 4 && (
+                                <button onClick={() => setShowSettlement(!showSettlement)} className="bg-emerald-600 px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/40">ABRECHNEN</button>
+                            )}
+                            <button onClick={() => {if(confirm("Löschen?")) { localStorage.clear(); location.reload(); }}} className="text-[10px] text-red-500 border border-red-500/20 px-2 py-1 rounded">RESET</button>
                         </div>
                     </header>
 
+                    {showSettlement && (
+                        <div className="bg-emerald-500 text-slate-900 p-6 rounded-3xl shadow-2xl space-y-4 animate-bounce-in">
+                            <h2 className="font-black text-xl uppercase tracking-tighter">Finale Kassensturz</h2>
+                            <div className="grid grid-cols-1 gap-2">
+                                {players.map(p => (
+                                    <div key={p.name} className="flex justify-between border-b border-slate-900/20 py-1">
+                                        <span className="font-bold">{p.name}</span>
+                                        <span className="font-mono font-black">{p.points > 0 ? "erhält" : "zahlt"} {(Math.abs(p.points)/100).toFixed(2)}€</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-[10px] font-bold opacity-70 italic text-center uppercase">Alle Salden sind ausgeglichen. Tisch ist sauber.</p>
+                        </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* SPIELER-LISTE */}
-                        <div className="bg-slate-800/50 backdrop-blur p-6 rounded-3xl shadow-xl border border-white/5 space-y-4">
-                            <h2 className="text-xs font-bold uppercase text-slate-500 tracking-widest">Kader</h2>
+                        <div className="bg-slate-800/80 backdrop-blur p-6 rounded-3xl shadow-xl border border-white/5 space-y-4">
+                            <h2 className="text-[10px] font-black uppercase text-slate-500 tracking-widest">Bank & Spieler</h2>
                             <div className="flex gap-2">
-                                <input className="flex-1 bg-slate-900 rounded-xl px-4 py-2 outline-none border border-white/5 focus:border-emerald-500 transition-colors" value={name} onChange={e => setName(e.target.value)} placeholder="Name..." />
-                                <button onClick={addPlayer} className="bg-emerald-600 px-6 rounded-xl font-bold hover:bg-emerald-500 shadow-lg shadow-emerald-900/20">+</button>
+                                <input className="flex-1 bg-slate-900 rounded-xl px-4 py-3 outline-none border border-white/5 focus:border-emerald-500 transition-all text-sm" value={name} onChange={e => setName(e.target.value)} placeholder="Name..." />
+                                <button onClick={addPlayer} className="bg-emerald-600 px-6 rounded-xl font-bold hover:bg-emerald-500 transition-all shadow-lg shadow-emerald-900/20">+</button>
                             </div>
                             <div className="space-y-2">
                                 {players.map((p, i) => (
-                                    <div key={i} className="flex justify-between items-center bg-slate-900/80 p-3 rounded-2xl border border-white/5 group">
+                                    <div key={i} className="flex justify-between items-center bg-slate-900/60 p-3 rounded-2xl border border-white/5 group">
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => kickPlayer(i)} className="text-red-900 group-hover:text-red-500 font-bold px-2 text-lg transition-colors">✕</button>
+                                            <button onClick={() => settleAndKick(i)} className="text-red-900 group-hover:text-red-500 font-bold px-2 transition-colors">✕</button>
                                             <span className="font-bold text-slate-200">{p.name}</span>
                                         </div>
                                         <span className={`font-mono font-bold px-3 py-1 rounded-lg ${p.points >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
@@ -201,11 +175,10 @@
                             </div>
                         </div>
 
-                        {/* RECHNER */}
                         <div className="bg-slate-800 p-6 rounded-3xl shadow-xl border border-white/5 space-y-6">
                             <div className="flex bg-slate-900 p-1 rounded-2xl border border-white/5">
-                                <button onClick={() => {setMode('normal'); setWinners([]); setLosers([]);}} className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${mode === 'normal' ? 'bg-emerald-600 shadow-xl' : 'text-slate-500'}`}>Sauspiel</button>
-                                <button onClick={() => {setMode('solo'); setWinners([]); setLosers([]);}} className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${mode === 'solo' ? 'bg-purple-600 shadow-xl' : 'text-slate-500'}`}>Solo</button>
+                                <button onClick={() => {setMode('normal'); setWinners([]); setLosers([]);}} className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${mode === 'normal' ? 'bg-emerald-600 shadow-xl text-white' : 'text-slate-500'}`}>Sauspiel</button>
+                                <button onClick={() => {setMode('solo'); setWinners([]); setLosers([]);}} className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 ${mode === 'solo' ? 'bg-purple-600 shadow-xl text-white' : 'text-slate-500'}`}>Solo</button>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -213,7 +186,7 @@
                                     <p className="text-[10px] text-emerald-500 font-black uppercase text-center tracking-widest">Gewinner</p>
                                     <div className="flex flex-col gap-1">
                                         {players.map(p => (
-                                            <button key={p.name} onClick={() => toggleWinner(p.name)} className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${winners.includes(p.name) ? 'bg-emerald-600 border-emerald-400 scale-[1.02]' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{p.name}</button>
+                                            <button key={p.name} onClick={() => { if(losers.includes(p.name)) return; winners.includes(p.name) ? setWinners(winners.filter(x => x !== p.name)) : setWinners([...winners, p.name]) }} className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${winners.includes(p.name) ? 'bg-emerald-600 border-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{p.name}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -221,44 +194,30 @@
                                     <p className="text-[10px] text-red-500 font-black uppercase text-center tracking-widest">Verlierer</p>
                                     <div className="flex flex-col gap-1">
                                         {players.map(p => (
-                                            <button key={p.name} onClick={() => toggleLoser(p.name)} className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${losers.includes(p.name) ? 'bg-red-600 border-red-400 scale-[1.02]' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{p.name}</button>
+                                            <button key={p.name} onClick={() => { if(winners.includes(p.name)) return; losers.includes(p.name) ? setLosers(losers.filter(x => x !== p.name)) : setLosers([...losers, p.name]) }} className={`py-3 rounded-xl text-xs font-bold border-2 transition-all ${losers.includes(p.name) ? 'bg-red-600 border-red-400' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>{p.name}</button>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-2">
-                                <input type="number" className="w-24 bg-slate-900 rounded-xl px-2 py-4 text-center font-bold text-2xl border border-white/5 outline-none focus:border-emerald-500" value={points} onChange={e => setPoints(e.target.value)} />
-                                <button onClick={recordGame} className="flex-1 bg-emerald-50 text-slate-900 rounded-xl font-black text-lg hover:bg-emerald-400 transition-all shadow-xl active:scale-95">EINTRAGEN</button>
+                            <div className="flex gap-3">
+                                <input type="number" className="w-24 bg-slate-900 rounded-xl px-2 py-4 text-center font-black text-2xl border border-white/5 outline-none focus:border-emerald-500" value={points} onChange={e => setPoints(e.target.value)} />
+                                <button onClick={recordGame} className="flex-1 bg-white text-slate-900 rounded-xl font-black text-lg hover:bg-emerald-400 transition-all shadow-xl active:scale-95">EINTRAGEN</button>
                             </div>
                         </div>
                     </div>
 
-                    {/* GRAPH */}
                     {gameCount > 0 && (
-                        <div className="bg-slate-800/30 p-4 md:p-8 rounded-[40px] shadow-2xl h-96 border border-white/5 relative overflow-hidden">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-600 mb-8 text-center">Profit / Loss Progression</h3>
-                            <ResponsiveContainer width="100%" height="90%">
+                        <div className="bg-slate-800/30 p-4 md:p-8 rounded-[40px] shadow-2xl h-96 border border-white/5 overflow-hidden">
+                            <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="10 10" stroke="#1e293b" vertical={false} />
-                                    <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} tickMargin={15} />
+                                    <XAxis dataKey="name" stroke="#475569" fontSize={10} axisLine={false} tickLine={false} />
                                     <YAxis stroke="#475569" fontSize={10} axisLine={false} tickLine={false} tickFormatter={v => `${(v/100).toFixed(0)}€`} />
-                                    <Tooltip 
-                                        contentStyle={{ backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '20px', padding: '15px' }}
-                                        itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '30px' }} />
+                                    <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '20px', fontSize: '12px' }} />
+                                    <Legend iconType="circle" />
                                     {players.map((p, i) => (
-                                        <Line 
-                                            key={p.name} 
-                                            type="linear" 
-                                            dataKey={p.name} 
-                                            stroke={['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'][i % 6]} 
-                                            strokeWidth={3} 
-                                            dot={{ r: 4, strokeWidth: 0, fill: '#fff' }} 
-                                            activeDot={{ r: 6, strokeWidth: 0 }}
-                                            animationDuration={1000}
-                                        />
+                                        <Line key={p.name} type="stepAfter" dataKey={p.name} stroke={['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#a78bfa', '#ec4899'][i % 6]} strokeWidth={4} dot={false} animationDuration={600} />
                                     ))}
                                 </LineChart>
                             </ResponsiveContainer>
