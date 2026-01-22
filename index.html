@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Schafkopf Abrechnung</title>
+  <title>Schafkopf Abrechnung Pro</title>
 
   <!-- React 18 -->
   <script defer src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script defer src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 
-  <!-- Recharts (UMD, stabil ohne Polling) -->
+  <!-- Recharts -->
   <script defer src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
 
-  <!-- Babel -->
+  <!-- Babel (Demo-only) -->
   <script defer src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Tailwind -->
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -26,6 +26,7 @@
     const { useState, useEffect, useMemo } = React;
 
     function SchafkopfApp() {
+      const [chartsReady, setChartsReady] = useState(false);
       const [players, setPlayers] = useState([]);
       const [newPlayerName, setNewPlayerName] = useState('');
       const [gameHistory, setGameHistory] = useState([]);
@@ -34,7 +35,19 @@
       const [pointValue, setPointValue] = useState('10');
       const [gameMode, setGameMode] = useState('normal');
 
-      // Load
+      /* ---------- Initialisierung Recharts (deterministisch) ---------- */
+      useEffect(() => {
+        if (window.Recharts) {
+          setChartsReady(true);
+          return;
+        }
+        const id = requestAnimationFrame(() => {
+          if (window.Recharts) setChartsReady(true);
+        });
+        return () => cancelAnimationFrame(id);
+      }, []);
+
+      /* ---------- Load ---------- */
       useEffect(() => {
         const p = localStorage.getItem('sk_players_v2');
         const h = localStorage.getItem('sk_history_v2');
@@ -42,18 +55,16 @@
         if (h) setGameHistory(JSON.parse(h));
       }, []);
 
-      // Save
+      /* ---------- Save ---------- */
       useEffect(() => {
         localStorage.setItem('sk_players_v2', JSON.stringify(players));
         localStorage.setItem('sk_history_v2', JSON.stringify(gameHistory));
       }, [players, gameHistory]);
 
+      /* ---------- Spiellogik (unverändert) ---------- */
       const addPlayer = () => {
         if (!newPlayerName.trim() || players.length >= 6) return;
-        setPlayers([
-          ...players,
-          { name: newPlayerName.trim(), points: 0, history: [{ round: 0, points: 0 }] }
-        ]);
+        setPlayers([...players, { name: newPlayerName.trim(), points: 0, history: [{ round: 0, points: 0 }] }]);
         setNewPlayerName('');
       };
 
@@ -103,8 +114,12 @@
         });
       }, [players, gameHistory]);
 
-      if (!window.Recharts) {
-        return <div className="flex items-center justify-center h-screen text-slate-400">Initialisiere…</div>;
+      if (!chartsReady) {
+        return (
+          <div className="flex items-center justify-center h-screen text-slate-400">
+            Initialisiere Diagramme…
+          </div>
+        );
       }
 
       const { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } = window.Recharts;
@@ -112,17 +127,16 @@
       return (
         <div className="max-w-6xl mx-auto p-6 space-y-8">
           <header className="flex justify-between items-center">
-            <h1 className="text-4xl font-extrabold tracking-tight text-emerald-400">Schafkopf Pro</h1>
+            <h1 className="text-4xl font-extrabold text-emerald-400">Schafkopf Pro</h1>
             <button onClick={() => { if (confirm('Alles löschen?')) { localStorage.clear(); location.reload(); } }}
-              className="text-sm px-4 py-2 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20">Reset</button>
+              className="px-4 py-2 rounded-xl text-red-400 bg-red-500/10">Reset</button>
           </header>
 
           <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-slate-800/70 backdrop-blur rounded-3xl p-6 space-y-4">
+            <div className="bg-slate-800/70 rounded-3xl p-6 space-y-4">
               <h2 className="font-bold">Spieler</h2>
               <div className="flex gap-2">
-                <input value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)}
-                  className="flex-1 bg-slate-900 rounded-xl px-4 py-2" placeholder="Name" />
+                <input value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} className="flex-1 bg-slate-900 rounded-xl px-4 py-2" />
                 <button onClick={addPlayer} className="bg-emerald-600 px-4 rounded-xl font-bold">+</button>
               </div>
               {players.map(p => (
@@ -133,7 +147,7 @@
               ))}
             </div>
 
-            <div className="lg:col-span-2 bg-slate-800/70 backdrop-blur rounded-3xl p-6 space-y-6">
+            <div className="lg:col-span-2 bg-slate-800/70 rounded-3xl p-6 space-y-6">
               <div className="flex bg-slate-900 rounded-2xl p-1">
                 <button onClick={() => setGameMode('normal')} className={`flex-1 py-2 rounded-xl ${gameMode==='normal'?'bg-emerald-600':''}`}>Sauspiel</button>
                 <button onClick={() => setGameMode('solo')} className={`flex-1 py-2 rounded-xl ${gameMode==='solo'?'bg-purple-600':''}`}>Solo</button>
@@ -141,7 +155,7 @@
 
               <div className="grid grid-cols-2 gap-4">
                 {[['Gewinner', winners, toggleWinner, 'emerald'], ['Verlierer', losers, toggleLoser, 'red']].map(([label, list, fn, color]) => (
-                  <div key={label} className={`rounded-2xl p-4 bg-${color}-500/5`}>
+                  <div key={label} className="rounded-2xl p-4 bg-slate-900/40">
                     <p className={`text-${color}-400 font-bold text-xs uppercase`}>{label}</p>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {players.map(p => (
@@ -156,8 +170,7 @@
               </div>
 
               <div className="flex gap-4">
-                <input type="number" value={pointValue} onChange={e=>setPointValue(e.target.value)}
-                  className="w-24 text-center text-xl bg-slate-900 rounded-xl" />
+                <input type="number" value={pointValue} onChange={e=>setPointValue(e.target.value)} className="w-24 text-center text-xl bg-slate-900 rounded-xl" />
                 <button onClick={recordGame} className="flex-1 bg-white text-slate-900 rounded-xl font-bold">Spiel speichern</button>
               </div>
             </div>
