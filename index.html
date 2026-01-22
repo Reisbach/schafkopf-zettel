@@ -26,26 +26,7 @@
     const { useState, useEffect, useMemo } = React;
 
     function SchafkopfApp() {
-      const [chartsReady, setChartsReady] = useState(false);
-      const [players, setPlayers] = useState([]);
-      const [newPlayerName, setNewPlayerName] = useState('');
-      const [gameHistory, setGameHistory] = useState([]);
-      const [winners, setWinners] = useState([]);
-      const [losers, setLosers] = useState([]);
-      const [pointValue, setPointValue] = useState('10');
-      const [gameMode, setGameMode] = useState('normal');
-
-      /* ---------- Initialisierung Recharts (deterministisch) ---------- */
-      useEffect(() => {
-        if (window.Recharts) {
-          setChartsReady(true);
-          return;
-        }
-        const id = requestAnimationFrame(() => {
-          if (window.Recharts) setChartsReady(true);
-        });
-        return () => cancelAnimationFrame(id);
-      }, []);
+      
 
       /* ---------- Load ---------- */
       useEffect(() => {
@@ -114,15 +95,9 @@
         });
       }, [players, gameHistory]);
 
-      if (!chartsReady) {
-        return (
-          <div className="flex items-center justify-center h-screen text-slate-400">
-            Initialisiere Diagramme…
-          </div>
-        );
-      }
+      
 
-      const { LineChart, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer } = window.Recharts;
+      
 
       return (
         <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -176,18 +151,7 @@
             </div>
           </section>
 
-          {gameHistory.length > 0 && (
-            <section className="bg-slate-800/70 rounded-3xl p-6 h-80">
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={chartData}>
-                  <CartesianGrid stroke="#222" strokeDasharray="3 3" />
-                  <XAxis dataKey="round" stroke="#555" />
-                  <YAxis stroke="#555" />
-                  <Tooltip />
-                  <Legend />
-                  {players.map((p,i)=> (
-                    <Line key={p.name} dataKey={p.name} stroke={['#4ade80','#f87171','#60a5fa','#fbbf24','#a78bfa','#f472b6'][i%6]} strokeWidth={3} dot={false} />
-                  ))}
+          
                 </LineChart>
               </ResponsiveContainer>
             </section>
