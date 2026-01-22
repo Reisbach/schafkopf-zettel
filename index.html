@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Schafkopf Abrechnung</title>
+    <title>Schafkopf Abrechnung Pro</title>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,8 +11,6 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
-        
-        /* Utility Classes */
         .min-h-screen { min-height: 100vh; }
         .bg-gradient-to-br { background: linear-gradient(to bottom right, var(--tw-gradient-stops)); }
         .from-slate-900 { --tw-gradient-from: #0f172a; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(15, 23, 42, 0)); }
@@ -21,203 +19,31 @@
         .bg-gradient-to-r { background: linear-gradient(to right, var(--tw-gradient-stops)); }
         .from-green-600 { --tw-gradient-from: #16a34a; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(22, 163, 74, 0)); }
         .to-green-700 { --tw-gradient-to: #15803d; }
-        .from-green-700 { --tw-gradient-from: #15803d; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(21, 128, 61, 0)); }
-        .to-green-800 { --tw-gradient-to: #166534; }
-        .from-purple-600 { --tw-gradient-from: #9333ea; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(147, 51, 234, 0)); }
-        .to-purple-700 { --tw-gradient-to: #7e22ce; }
         .from-red-600 { --tw-gradient-from: #dc2626; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(220, 38, 38, 0)); }
-        .to-red-700 { --tw-gradient-to: #b91c1c; }
-        .from-yellow-400 { --tw-gradient-from: #facc15; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(250, 204, 21, 0)); }
-        .to-yellow-500 { --tw-gradient-to: #eab308; }
-        .from-gray-50 { --tw-gradient-from: #f9fafb; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(249, 250, 251, 0)); }
-        .from-green-50 { --tw-gradient-from: #f0fdf4; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(240, 253, 244, 0)); }
-        .from-purple-50 { --tw-gradient-from: #faf5ff; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(250, 245, 255, 0)); }
-        .from-green-500 { --tw-gradient-from: #22c55e; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(34, 197, 94, 0)); }
-        .to-green-600 { --tw-gradient-to: #16a34a; }
-        .from-purple-500 { --tw-gradient-from: #a855f7; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(168, 85, 247, 0)); }
-        .to-purple-600 { --tw-gradient-to: #9333ea; }
-        .from-red-500 { --tw-gradient-from: #ef4444; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(239, 68, 68, 0)); }
-        .to-red-600 { --tw-gradient-to: #dc2626; }
-        .from-gray-300 { --tw-gradient-from: #d1d5db; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(209, 213, 219, 0)); }
-        .to-gray-400 { --tw-gradient-to: #9ca3af; }
-        
         .p-4 { padding: 1rem; }
         .p-6 { padding: 1.5rem; }
         .p-8 { padding: 2rem; }
-        .p-2 { padding: 0.5rem; }
-        .p-3 { padding: 0.75rem; }
-        .px-4 { padding-left: 1rem; padding-right: 1rem; }
-        .px-8 { padding-left: 2rem; padding-right: 2rem; }
-        .px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
-        .py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-        .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
-        .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
-        .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
-        .mt-1 { margin-top: 0.25rem; }
-        .mt-3 { margin-top: 0.75rem; }
-        .mt-2 { margin-top: 0.5rem; }
-        .mb-4 { margin-bottom: 1rem; }
-        .mb-3 { margin-bottom: 0.75rem; }
-        .mb-6 { margin-bottom: 1.5rem; }
-        .mb-2 { margin-bottom: 0.5rem; }
-        .mb-5 { margin-bottom: 1.25rem; }
-        .ml-2 { margin-left: 0.5rem; }
-        
         .max-w-7xl { max-width: 80rem; margin-left: auto; margin-right: auto; }
         .space-y-6 > * + * { margin-top: 1.5rem; }
-        .space-y-3 > * + * { margin-top: 0.75rem; }
-        .space-y-2 > * + * { margin-top: 0.5rem; }
-        .gap-4 { gap: 1rem; }
-        .gap-3 { gap: 0.75rem; }
-        .gap-2 { gap: 0.5rem; }
-        .gap-1 { gap: 0.25rem; }
-        
+        .grid { display: grid; }
         .rounded-2xl { border-radius: 1rem; }
         .rounded-xl { border-radius: 0.75rem; }
-        .rounded-lg { border-radius: 0.5rem; }
-        .rounded-full { border-radius: 9999px; }
-        
         .shadow-2xl { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
-        .shadow-xl { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); }
-        .shadow-lg { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
-        .shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        
         .text-white { color: #fff; }
-        .text-gray-800 { color: #1f2937; }
-        .text-gray-600 { color: #4b5563; }
-        .text-gray-500 { color: #6b7280; }
-        .text-gray-400 { color: #9ca3af; }
-        .text-green-100 { color: #dcfce7; }
-        .text-green-600 { color: #16a34a; }
-        .text-green-700 { color: #15803d; }
-        .text-red-600 { color: #dc2626; }
-        .text-red-700 { color: #b91c1c; }
-        .text-red-500 { color: #ef4444; }
-        .text-red-800 { color: #991b1b; }
-        .text-purple-700 { color: #7e22ce; }
-        .text-yellow-900 { color: #713f12; }
-        .text-yellow-800 { color: #854d0e; }
-        
-        .text-4xl { font-size: 2.25rem; line-height: 2.5rem; }
-        .text-3xl { font-size: 1.875rem; line-height: 2.25rem; }
-        .text-2xl { font-size: 1.5rem; line-height: 2rem; }
-        .text-xl { font-size: 1.25rem; line-height: 1.75rem; }
-        .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
-        .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
-        .text-xs { font-size: 0.75rem; line-height: 1rem; }
-        
-        .font-bold { font-weight: 700; }
-        .font-semibold { font-weight: 600; }
-        .font-medium { font-weight: 500; }
-        .font-black { font-weight: 900; }
-        
+        .text-green-400 { color: #4ade80; }
+        .bg-white { background-color: #fff; }
         .flex { display: flex; }
-        .grid { display: grid; }
         .items-center { align-items: center; }
         .justify-between { justify-content: space-between; }
-        .justify-center { justify-content: center; }
-        
-        .bg-white { background-color: #fff; }
-        .bg-gray-50 { background-color: #f9fafb; }
-        .bg-gray-100 { background-color: #f3f4f6; }
-        .bg-gray-200 { background-color: #e5e7eb; }
-        .bg-green-500 { background-color: #22c55e; }
-        .bg-red-50 { background-color: #fef2f2; }
-        .bg-yellow-100 { background-color: #fef3c7; }
-        .bg-purple-200 { background-color: #e9d5ff; }
-        
-        .border { border-width: 1px; }
-        .border-2 { border-width: 2px; }
-        .border-gray-200 { border-color: #e5e7eb; }
-        .border-gray-300 { border-color: #d1d5db; }
-        .border-green-100 { border-color: #dcfce7; }
-        .border-green-200 { border-color: #bbf7d0; }
-        .border-green-300 { border-color: #86efac; }
-        .border-green-400 { border-color: #4ade80; }
-        .border-red-400 { border-color: #f87171; }
-        .border-purple-300 { border-color: #d8b4fe; }
-        .border-purple-400 { border-color: #c084fc; }
-        .border-yellow-200 { border-color: #fef08a; }
-        .border-yellow-400 { border-color: #facc15; }
-        .border-blue-100 { border-color: #dbeafe; }
-        
+        .gap-2 { gap: 0.5rem; }
+        .gap-3 { gap: 0.75rem; }
+        .border { border: 1px solid #e5e7eb; }
         .w-full { width: 100%; }
-        .w-10 { width: 2.5rem; }
-        .w-8 { width: 2rem; }
-        .w-7 { width: 1.75rem; }
-        .w-6 { width: 1.5rem; }
-        .w-5 { width: 1.25rem; }
-        .w-3 { width: 0.75rem; }
-        .w-12 { width: 3rem; }
-        .h-10 { height: 2.5rem; }
-        .h-8 { height: 2rem; }
-        .h-7 { height: 1.75rem; }
-        .h-6 { height: 1.5rem; }
-        .h-5 { height: 1.25rem; }
-        .h-3 { height: 0.75rem; }
-        .h-12 { height: 3rem; }
-        .max-h-96 { max-height: 24rem; }
-        
-        .overflow-y-auto { overflow-y: auto; }
-        .cursor-pointer { cursor: pointer; }
-        .cursor-not-allowed { cursor: not-allowed; }
-        
-        .transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
-        .transform { transform: translateX(0) translateY(0) rotate(0) skewX(0) skewY(0) scaleX(1) scaleY(1); }
-        .hover\:scale-105:hover { transform: scale(1.05); }
-        
-        .text-left { text-align: left; }
-        .text-center { text-align: center; }
-        
-        .sticky { position: sticky; }
-        .top-4 { top: 1rem; }
-        
-        .opacity-0 { opacity: 0; }
-        .group:hover .group-hover\:opacity-100 { opacity: 1; }
-        
-        .disabled\:from-gray-300:disabled { --tw-gradient-from: #d1d5db; }
-        .disabled\:to-gray-400:disabled { --tw-gradient-to: #9ca3af; }
-        .disabled\:transform-none:disabled { transform: none; }
-        
-        .hover\:from-green-700:hover { --tw-gradient-from: #15803d; }
-        .hover\:to-green-800:hover { --tw-gradient-to: #166534; }
-        .hover\:from-red-700:hover { --tw-gradient-from: #b91c1c; }
-        .hover\:to-red-800:hover { --tw-gradient-to: #991b1b; }
-        .hover\:border-green-300:hover { border-color: #86efac; }
-        .hover\:border-green-400:hover { border-color: #4ade80; }
-        .hover\:border-red-400:hover { border-color: #f87171; }
-        .hover\:border-purple-400:hover { border-color: #c084fc; }
-        .hover\:text-red-700:hover { color: #b91c1c; }
-        .hover\:text-red-800:hover { color: #991b1b; }
-        .hover\:bg-red-50:hover { background-color: #fef2f2; }
-        .hover\:bg-white:hover { background-color: #fff; }
-        .hover\:shadow-md:hover { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        
-        .focus\:outline-none:focus { outline: 2px solid transparent; outline-offset: 2px; }
-        .focus\:border-green-500:focus { border-color: #22c55e; }
-        .focus\:bg-white:focus { background-color: #fff; }
-        
-        .backdrop-blur-sm { backdrop-filter: blur(4px); }
-        .bg-white\/95 { background-color: rgba(255, 255, 255, 0.95); }
-        .bg-white\/20 { background-color: rgba(255, 255, 255, 0.2); }
-        .bg-white\/70 { background-color: rgba(255, 255, 255, 0.7); }
-        
-        .flex-1 { flex: 1 1 0%; }
-        
-        input, button { outline: none; }
-        button:disabled { cursor: not-allowed; }
-        
-        @media (min-width: 768px) {
-            .md\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-        
-        @media (min-width: 1024px) {
-            .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-            .lg\:col-span-2 { grid-column: span 2 / span 2; }
-        }
-        
-        .grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        .pr-2 { padding-right: 0.5rem; }
+        .h-80 { height: 20rem; }
+        input { outline: none; border: 1px solid #e5e7eb; padding: 0.5rem 1rem; border-radius: 0.75rem; }
+        button { cursor: pointer; border: none; transition: all 0.2s; }
+        button:active { transform: scale(0.95); }
+        @media (min-width: 1024px) { .lg\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lg\:col-span-2 { grid-column: span 2 / span 2; } }
     </style>
 </head>
 <body>
@@ -227,55 +53,18 @@
         const { useState, useEffect } = React;
         const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
 
-        const Users = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-        );
-        const Plus = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        );
-        const Minus = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        );
-        const Trophy = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-            </svg>
-        );
-        const TrendingUp = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
-            </svg>
-        );
-        const Zap = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
-        );
-        const BarChart3 = ({ className }) => (
-            <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>
-            </svg>
-        );
+        // Icons
+        const Users = () => <span style={{fontSize: '1.2rem'}}>👥</span>;
+        const Plus = () => <span>+</span>;
+        const Minus = () => <span>−</span>;
+        const Trophy = () => <span>🏆</span>;
+        const Zap = () => <span>⚡</span>;
+        const BarChart3 = () => <span>📊</span>;
 
         window.storage = {
-            get: async (key) => {
-                const value = localStorage.getItem(key);
-                return value ? { value } : null;
-            },
-            set: async (key, value) => {
-                localStorage.setItem(key, value);
-                return { key, value };
-            },
-            delete: async (key) => {
-                localStorage.removeItem(key);
-                return { key, deleted: true };
-            }
+            get: async (key) => ({ value: localStorage.getItem(key) }),
+            set: async (key, value) => localStorage.setItem(key, value),
+            delete: async (key) => localStorage.removeItem(key)
         };
 
         function SchafkopfApp() {
@@ -291,36 +80,17 @@
 
             useEffect(() => {
                 const loadData = async () => {
-                    try {
-                        const playersData = await window.storage.get('schafkopf_players');
-                        const historyData = await window.storage.get('schafkopf_history');
-                        
-                        if (playersData?.value) {
-                            const loadedPlayers = JSON.parse(playersData.value);
-                            const playersWithHistory = loadedPlayers.map(p => ({
-                                ...p,
-                                history: p.history || [{ round: 0, points: p.points || 0 }],
-                                handsPlayed: p.handsPlayed || 0
-                            }));
-                            setPlayers(playersWithHistory);
-                        }
-                        if (historyData?.value) {
-                            setGameHistory(JSON.parse(historyData.value));
-                        }
-                    } catch (error) {
-                        console.log('Keine gespeicherten Daten gefunden');
-                    }
+                    const playersData = await window.storage.get('schafkopf_players');
+                    const historyData = await window.storage.get('schafkopf_history');
+                    if (playersData?.value) setPlayers(JSON.parse(playersData.value));
+                    if (historyData?.value) setGameHistory(JSON.parse(historyData.value));
                 };
                 loadData();
             }, []);
 
-            const saveData = async (newPlayers, newHistory) => {
-                try {
-                    await window.storage.set('schafkopf_players', JSON.stringify(newPlayers));
-                    await window.storage.set('schafkopf_history', JSON.stringify(newHistory));
-                } catch (error) {
-                    console.error('Fehler beim Speichern:', error);
-                }
+            const saveData = (newPlayers, newHistory) => {
+                window.storage.set('schafkopf_players', JSON.stringify(newPlayers));
+                window.storage.set('schafkopf_history', JSON.stringify(newHistory));
             };
 
             const addPlayer = () => {
@@ -338,48 +108,29 @@
                 }
             };
 
-            const removePlayer = (index) => {
-                const newPlayers = players.filter((_, i) => i !== index);
-                setPlayers(newPlayers);
-                setSelectedWinners([]);
-                setSelectedLosers([]);
-                saveData(newPlayers, gameHistory);
-            };
-
             const toggleWinner = (index) => {
                 if (selectedLosers.includes(index)) return;
-                const maxWinners = gameMode === 'solo' ? 3 : 2;
-                if (selectedWinners.includes(index)) {
-                    setSelectedWinners(selectedWinners.filter(i => i !== index));
-                } else if (selectedWinners.length < maxWinners) {
-                    setSelectedWinners([...selectedWinners, index]);
-                }
+                const max = gameMode === 'solo' ? 3 : 2;
+                if (selectedWinners.includes(index)) setSelectedWinners(selectedWinners.filter(i => i !== index));
+                else if (selectedWinners.length < max) setSelectedWinners([...selectedWinners, index]);
             };
 
             const toggleLoser = (index) => {
                 if (selectedWinners.includes(index)) return;
-                const maxLosers = gameMode === 'solo' ? 1 : 2;
-                if (selectedLosers.includes(index)) {
-                    setSelectedLosers(selectedLosers.filter(i => i !== index));
-                } else if (selectedLosers.length < maxLosers) {
-                    setSelectedLosers([...selectedLosers, index]);
-                }
+                const max = gameMode === 'solo' ? 1 : 2;
+                if (selectedLosers.includes(index)) setSelectedLosers(selectedLosers.filter(i => i !== index));
+                else if (selectedLosers.length < max) setSelectedLosers([...selectedLosers, index]);
             };
 
             const recordGame = () => {
-                const expectedWinners = gameMode === 'solo' ? 3 : 2;
-                const expectedLosers = gameMode === 'solo' ? 1 : 2;
-                if (selectedWinners.length !== expectedWinners || selectedLosers.length !== expectedLosers) {
-                    alert(`Bitte wähle ${expectedWinners} Gewinner und ${expectedLosers} Verlierer!`);
-                    return;
-                }
                 const points = parseFloat(pointValue);
-                if (isNaN(points) || points <= 0) {
-                    alert('Bitte gib einen gültigen Punktwert in ct ein!');
+                if (isNaN(points) || points <= 0 || selectedWinners.length < 1) {
+                    alert('Checke Eingabe & Auswahl!');
                     return;
                 }
                 const newPlayers = [...players];
                 const currentRound = gameHistory.length + 1;
+
                 selectedWinners.forEach(i => {
                     newPlayers[i].points += points;
                     newPlayers[i].handsPlayed += 1;
@@ -390,22 +141,23 @@
                     newPlayers[i].handsPlayed += 1;
                     newPlayers[i].history.push({ round: currentRound, points: newPlayers[i].points });
                 });
+                // History für Aussetzende
                 players.forEach((_, i) => {
                     if (!selectedWinners.includes(i) && !selectedLosers.includes(i)) {
-                        if (!newPlayers[i].history) newPlayers[i].history = [];
                         newPlayers[i].history.push({ round: currentRound, points: newPlayers[i].points });
                     }
                 });
-                const sitting = players.map((p, i) => !selectedWinners.includes(i) && !selectedLosers.includes(i) ? p.name : null).filter(Boolean);
+
                 const game = {
-                    timestamp: new Date().toLocaleString('de-DE'),
+                    timestamp: new Date().toLocaleTimeString('de-DE', {hour: '2-digit', minute:'2-digit'}),
                     winners: selectedWinners.map(i => players[i].name),
                     losers: selectedLosers.map(i => players[i].name),
-                    sitting: sitting,
+                    sitting: players.map((p, i) => !selectedWinners.includes(i) && !selectedLosers.includes(i) ? p.name : null).filter(Boolean),
                     points: points,
                     mode: gameMode,
                     round: currentRound
                 };
+
                 const newHistory = [...gameHistory, game];
                 setPlayers(newPlayers);
                 setGameHistory(newHistory);
@@ -415,70 +167,32 @@
                 saveData(newPlayers, newHistory);
             };
 
-            const resetAll = () => {
-                if (window.confirm('Wirklich alle Daten zurücksetzen? Diese Aktion kann nicht rückgängig gemacht werden!')) {
-                    const resetData = async () => {
-                        try {
-                            await window.storage.delete('schafkopf_players');
-                            await window.storage.delete('schafkopf_history');
-                        } catch (error) {
-                            console.error('Fehler beim Löschen:', error);
-                        }
-                        setPlayers([]);
-                        setGameHistory([]);
-                        setSelectedWinners([]);
-                        setSelectedLosers([]);
-                        setPointValue('');
-                        setGameMode('normal');
-                    };
-                    resetData();
-                }
-            };
-
-            const deleteGame = (gameIndex) => {
-                if (!window.confirm('Dieses Spiel wirklich löschen? Die Punkte werden zurückgerechnet.')) return;
-                const actualIndex = gameHistory.length - 1 - gameIndex;
-                const gameToDelete = gameHistory[actualIndex];
-                const newPlayers = players.map(p => ({...p, history: [...p.history]}));
-                gameToDelete.winners.forEach(winnerName => {
-                    const player = newPlayers.find(p => p.name === winnerName);
-                    if (player) {
-                        player.points -= gameToDelete.points;
-                        player.handsPlayed = Math.max(0, player.handsPlayed - 1);
-                        player.history = player.history.filter(h => h.round !== gameToDelete.round);
-                    }
+            const deleteGame = (index) => {
+                if (!confirm('Runde löschen?')) return;
+                const actualIdx = gameHistory.length - 1 - index;
+                const game = gameHistory[actualIdx];
+                const newPlayers = players.map(p => {
+                    let pPoints = p.points;
+                    let pHands = p.handsPlayed;
+                    if (game.winners.includes(p.name)) { pPoints -= game.points; pHands--; }
+                    if (game.losers.includes(p.name)) { pPoints += game.points; pHands--; }
+                    return { ...p, points: pPoints, handsPlayed: Math.max(0, pHands), history: p.history.filter(h => h.round !== game.round) };
                 });
-                gameToDelete.losers.forEach(loserName => {
-                    const player = newPlayers.find(p => p.name === loserName);
-                  // ... (Fortsetzung der deleteGame Funktion und Start des Renderings)
-                gameToDelete.sitting.forEach(sittingName => {
-                    const player = newPlayers.find(p => p.name === sittingName);
-                    if (player) {
-                        player.history = player.history.filter(h => h.round !== gameToDelete.round);
-                    }
-                });
-
-                const newHistory = gameHistory.filter((_, i) => i !== actualIndex);
+                const newHistory = gameHistory.filter((_, i) => i !== actualIdx);
                 setPlayers(newPlayers);
                 setGameHistory(newHistory);
                 saveData(newPlayers, newHistory);
             };
 
-            // Hilfsfunktion für Diagrammdaten
             const getChartData = () => {
-                const rounds = gameHistory.length;
-                const data = [];
-                for (let i = 0; i <= rounds; i++) {
-                    const entry = { name: `Rnd ${i}` };
+                return Array.from({ length: gameHistory.length + 1 }, (_, r) => {
+                    const entry = { name: r };
                     players.forEach(p => {
-                        const historyAtRound = p.history.find(h => h.round === i) || 
-                                             [...p.history].reverse().find(h => h.round < i) || 
-                                             { points: 0 };
-                        entry[p.name] = historyAtRound.points;
+                        const h = p.history.find(x => x.round === r) || p.history.filter(x => x.round < r).pop() || {points: 0};
+                        entry[p.name] = h.points;
                     });
-                    data.push(entry);
-                }
-                return data;
+                    return entry;
+                });
             };
 
             return (
@@ -486,231 +200,92 @@
                     <div className="max-w-7xl mx-auto space-y-6">
                         
                         {/* Header */}
-                        <div className="flex justify-between items-center bg-white/10 backdrop-blur-sm p-6 rounded-2xl border border-white/20 shadow-2xl">
-                            <div>
-                                <h1 className="text-4xl font-black text-white flex items-center gap-3">
-                                    <Zap className="text-yellow-400 fill-yellow-400" /> 
-                                    Schafkopf <span className="text-green-400">Pro</span>
-                                </h1>
-                                <p className="text-green-100/60 text-sm mt-1">Tradition digital abrechnen</p>
-                            </div>
-                            <button 
-                                onClick={resetAll}
-                                className="p-3 bg-red-500/20 hover:bg-red-500/40 text-red-200 rounded-xl transition-all border border-red-500/30"
-                                title="Alles zurücksetzen"
-                            >
-                                <Minus className="w-6 h-6" />
-                            </button>
+                        <div className="flex justify-between items-center bg-white/10 p-6 rounded-2xl border border-white/20 shadow-2xl">
+                            <h1 className="text-2xl md:text-4xl font-black text-white flex items-center gap-3">
+                                <Zap /> Schafkopf <span className="text-green-400">Pro</span>
+                            </h1>
+                            <button onClick={() => {if(confirm('Alles löschen?')){localStorage.clear(); location.reload();}}} className="bg-red-600/20 text-white p-2 rounded-xl border border-red-500/50"><Minus /></button>
                         </div>
 
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            
-                            {/* Linke Spalte: Spieler & Eingabe */}
                             <div className="space-y-6">
-                                {/* Spieler hinzufügen */}
-                                <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                        <Users className="text-green-600" /> Spieler ({players.length}/6)
-                                    </h2>
+                                {/* Spieler-Input */}
+                                <div className="bg-white rounded-2xl p-6 shadow-xl">
+                                    <h2 className="font-bold mb-4 flex items-center gap-2"><Users /> Spieler ({players.length}/6)</h2>
                                     <div className="flex gap-2 mb-4">
-                                        <input 
-                                            type="text" 
-                                            value={newPlayerName}
-                                            onChange={(e) => setNewPlayerName(e.target.value)}
-                                            onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
-                                            placeholder="Name eingeben..."
-                                            className="flex-1 px-4 py-2 rounded-xl border border-gray-200 focus:border-green-500 transition-all bg-gray-50"
-                                        />
-                                        <button 
-                                            onClick={addPlayer}
-                                            disabled={players.length >= 6 || !newPlayerName}
-                                            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white p-2 rounded-xl transition-all shadow-md active:scale-95"
-                                        >
-                                            <Plus className="w-6 h-6" />
-                                        </button>
+                                        <input className="w-full" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} placeholder="Name..." />
+                                        <button onClick={addPlayer} className="bg-green-600 text-white px-4 rounded-xl"><Plus /></button>
                                     </div>
-                                    
                                     <div className="flex flex-wrap gap-2">
-                                        {players.map((player, index) => (
-                                            <div key={index} className="group relative bg-gray-100 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-2 border border-gray-200">
-                                                {player.name}
-                                                <button onClick={() => removePlayer(index)} className="text-gray-400 hover:text-red-500 transition-colors">
-                                                    ×
-                                                </button>
-                                            </div>
-                                        ))}
+                                        {players.map((p, i) => <span key={i} className="bg-gray-100 px-3 py-1 rounded-full text-sm font-bold">{p.name}</span>)}
                                     </div>
                                 </div>
 
-                                {/* Spiel-Eingabe */}
-                                <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                                    <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                                        <Trophy className="text-yellow-500" /> Neues Spiel
-                                    </h2>
-                                    
-                                    <div className="grid grid-cols-2 gap-2 mb-6">
-                                        <button 
-                                            onClick={() => {setGameMode('normal'); setSelectedWinners([]); setSelectedLosers([]);}}
-                                            className={`py-2 rounded-xl font-bold transition-all ${gameMode === 'normal' ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-100 text-gray-500'}`}
-                                        >
-                                            Sauspiel
-                                        </button>
-                                        <button 
-                                            onClick={() => {setGameMode('solo'); setSelectedWinners([]); setSelectedLosers([]);}}
-                                            className={`py-2 rounded-xl font-bold transition-all ${gameMode === 'solo' ? 'bg-purple-600 text-white shadow-lg' : 'bg-gray-100 text-gray-500'}`}
-                                        >
-                                            Solo/Wenz
-                                        </button>
+                                {/* Eingabe-Maske */}
+                                <div className="bg-white rounded-2xl p-6 shadow-xl">
+                                    <h2 className="font-bold mb-4 flex items-center gap-2"><Trophy /> Neues Spiel</h2>
+                                    <div className="grid grid-cols-2 gap-2 mb-4">
+                                        <button onClick={() => setGameMode('normal')} className={`py-2 rounded-xl font-bold ${gameMode === 'normal' ? 'bg-green-600 text-white' : 'bg-gray-100'}`}>Normal</button>
+                                        <button onClick={() => setGameMode('solo')} className={`py-2 rounded-xl font-bold ${gameMode === 'solo' ? 'bg-purple-600 text-white' : 'bg-gray-100'}`}>Solo</button>
                                     </div>
-
                                     <div className="space-y-4">
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Gewinner wählen:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {players.map((p, i) => (
-                                                    <button 
-                                                        key={i}
-                                                        onClick={() => toggleWinner(i)}
-                                                        className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${selectedWinners.includes(i) ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-100 bg-white text-gray-600'}`}
-                                                    >
-                                                        {p.name}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <p className="text-xs font-bold text-gray-400">GEWINNER:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {players.map((p, i) => (
+                                                <button key={i} onClick={() => toggleWinner(i)} className={`px-3 py-2 rounded-xl border-2 ${selectedWinners.includes(i) ? 'border-green-500 bg-green-50' : 'border-gray-100'}`}>{p.name}</button>
+                                            ))}
                                         </div>
-
-                                        <div>
-                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Verlierer wählen:</p>
-                                            <div className="flex flex-wrap gap-2">
-                                                {players.map((p, i) => (
-                                                    <button 
-                                                        key={i}
-                                                        onClick={() => toggleLoser(i)}
-                                                        className={`px-3 py-2 rounded-xl text-sm font-medium border-2 transition-all ${selectedLosers.includes(i) ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-100 bg-white text-gray-600'}`}
-                                                    >
-                                                        {p.name}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                        <p className="text-xs font-bold text-gray-400">VERLIERER:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {players.map((p, i) => (
+                                                <button key={i} onClick={() => toggleLoser(i)} className={`px-3 py-2 rounded-xl border-2 ${selectedLosers.includes(i) ? 'border-red-500 bg-red-50' : 'border-gray-100'}`}>{p.name}</button>
+                                            ))}
                                         </div>
-
-                                        <div className="pt-2">
-                                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Betrag pro Person (ct):</label>
-                                            <input 
-                                                type="number" 
-                                                value={pointValue}
-                                                onChange={(e) => setPointValue(e.target.value)}
-                                                placeholder="z.B. 10, 20, 50..."
-                                                className="w-full mt-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 bg-gray-50 text-xl font-bold"
-                                            />
-                                        </div>
-
-                                        <button 
-                                            onClick={recordGame}
-                                            className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 rounded-xl font-black text-lg shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-95 transition-all mt-4"
-                                        >
-                                            SPIEL EINTRAGEN
-                                        </button>
+                                        <input type="number" className="w-full text-lg font-bold" value={pointValue} onChange={e => setPointValue(e.target.value)} placeholder="Betrag in ct..." />
+                                        <button onClick={recordGame} className="w-full bg-green-600 text-white py-3 rounded-xl font-black shadow-lg">EINTRAGEN</button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Mittlere & Rechte Spalte: Dashboard */}
+                            {/* Dashboard & Chart */}
                             <div className="lg:col-span-2 space-y-6">
-                                
-                                {/* Rangliste */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {[...players].sort((a, b) => b.points - a.points).map((player, index) => (
-                                        <div key={index} className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-lg border-b-4 border-green-500 overflow-hidden relative group">
-                                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                                                <TrendingUp className="w-12 h-12" />
-                                            </div>
-                                            <p className="text-gray-500 text-xs font-bold uppercase">{index === 0 ? '👑 Tabellenführer' : `Rang ${index + 1}`}</p>
-                                            <h3 className="text-2xl font-black text-gray-800 truncate">{player.name}</h3>
-                                            <div className="mt-2 flex justify-between items-end">
-                                                <span className={`text-3xl font-black ${player.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {(player.points / 100).toFixed(2)}€
-                                                </span>
-                                                <span className="text-xs text-gray-400 font-medium">{player.handsPlayed} Spiele</span>
-                                            </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {[...players].sort((a,b) => b.points - a.points).map((p, i) => (
+                                        <div key={i} className="bg-white p-4 rounded-2xl shadow-md border-b-4 border-green-500">
+                                            <p className="text-xs text-gray-400">Rang {i+1}</p>
+                                            <h3 className="font-bold truncate">{p.name}</h3>
+                                            <p className={`text-xl font-black ${p.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>{(p.points/100).toFixed(2)}€</p>
                                         </div>
                                     ))}
                                 </div>
 
-                                {/* Graph */}
-                                {gameHistory.length > 0 && (
-                                    <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-                                        <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                                            <BarChart3 className="text-purple-600" /> Spielverlauf (€)
-                                        </h2>
-                                        <div className="h-80 w-full">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={getChartData()}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                                    <XAxis dataKey="name" hide />
-                                                    <YAxis tickFormatter={(val) => (val/100).toFixed(1)} />
-                                                    <Tooltip 
-                                                        formatter={(value) => [`${(value/100).toFixed(2)}€`]}
-                                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                                                    />
-                                                    <Legend />
-                                                    {players.map((p, i) => (
-                                                        <Line 
-                                                            key={p.name} 
-                                                            type="monotone" 
-                                                            dataKey={p.name} 
-                                                            stroke={colors[i % colors.length]} 
-                                                            strokeWidth={3}
-                                                            dot={{ r: 4 }}
-                                                            activeDot={{ r: 8 }}
-                                                        />
-                                                    ))}
-                                                </LineChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Historie */}
-                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-                                    <div className="p-6 border-b border-gray-50 flex justify-between items-center">
-                                        <h2 className="text-xl font-bold text-gray-800">Letzte Spiele</h2>
-                                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold">Total: {gameHistory.length}</span>
-                                    </div>
-                                    <div className="max-h-96 overflow-y-auto px-6">
-                                        {[...gameHistory].reverse().map((game, index) => (
-                                            <div key={index} className="group py-4 border-b border-gray-50 last:border-0 flex justify-between items-center">
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className={`w-2 h-2 rounded-full ${game.mode === 'solo' ? 'bg-purple-500' : 'bg-green-500'}`}></span>
-                                                        <span className="text-sm font-bold text-gray-800">
-                                                            {game.winners.join(' & ')}
-                                                        </span>
-                                                        <span className="text-xs text-gray-400">gewinnen gegen</span>
-                                                        <span className="text-sm font-bold text-gray-800">
-                                                            {game.losers.join(' & ')}
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-xs text-gray-400">
-                                                        {game.timestamp} • {game.mode === 'solo' ? 'Solo' : 'Sauspiel'} • {(game.points/100).toFixed(2)}€
-                                                    </p>
-                                                </div>
-                                                <button 
-                                                    onClick={() => deleteGame(index)}
-                                                    className="opacity-0 group-hover:opacity-100 p-2 text-gray-300 hover:text-red-500 transition-all"
-                                                >
-                                                    <Minus className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {gameHistory.length === 0 && (
-                                            <div className="py-12 text-center text-gray-400">
-                                                Noch keine Spiele aufgezeichnet.
-                                            </div>
-                                        )}
+                                <div className="bg-white p-6 rounded-2xl shadow-xl">
+                                    <h2 className="font-bold mb-4 flex items-center gap-2"><BarChart3 /> Verlauf</h2>
+                                    <div className="h-80 w-full">
+                                        <ResponsiveContainer>
+                                            <LineChart data={getChartData()}>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                                <XAxis dataKey="name" hide />
+                                                <YAxis />
+                                                <Tooltip formatter={(v) => [(v/100).toFixed(2)+'€']} />
+                                                <Legend />
+                                                {players.map((p, i) => <Line key={p.name} type="monotone" dataKey={p.name} stroke={colors[i % colors.length]} strokeWidth={3} dot={false} />)}
+                                            </LineChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 </div>
 
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                                    <div className="p-4 bg-gray-50 border-b font-bold">Historie</div>
+                                    <div className="max-h-60 overflow-y-auto">
+                                        {[...gameHistory].reverse().map((g, i) => (
+                                            <div key={i} className="p-4 border-b flex justify-between items-center text-sm">
+                                                <span><strong>{g.winners.join(', ')}</strong> schlugen {g.losers.join(', ')} ({(g.points/100).toFixed(2)}€)</span>
+                                                <button onClick={() => deleteGame(i)} className="text-red-500 font-bold">Löschen</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
