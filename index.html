@@ -7,22 +7,24 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.12.7/dist/Recharts.js"></script>
+    <script src="https://unpkg.com/recharts/dist/Recharts.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white font-sans">
     <div id="root">
         <div class="flex items-center justify-center min-h-screen">
-            <p class="text-xl animate-pulse">Lade Schafkopf-App...</p>
+            <p class="text-xl animate-pulse text-green-400 font-bold">Lade Schafkopf-App...</p>
         </div>
     </div>
 
     <script type="text/babel">
-        // Zugriff auf Recharts Komponenten
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = window.Recharts;
         const { useState, useEffect } = React;
 
         function SchafkopfApp() {
+            // Komponenten sicher aus window.Recharts holen
+            const RechartsLib = window.Recharts;
+            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = RechartsLib || {};
+
             const [players, setPlayers] = useState([]);
             const [newPlayerName, setNewPlayerName] = useState('');
             const [gameHistory, setGameHistory] = useState([]);
@@ -33,7 +35,6 @@
 
             const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'];
 
-            // Daten beim Start laden
             useEffect(() => {
                 const savedPlayers = localStorage.getItem('sk_players');
                 const savedHistory = localStorage.getItem('sk_history');
@@ -41,7 +42,6 @@
                 if (savedHistory) setGameHistory(JSON.parse(savedHistory));
             }, []);
 
-            // Speichern bei Änderungen
             useEffect(() => {
                 if (players.length > 0) localStorage.setItem('sk_players', JSON.stringify(players));
                 localStorage.setItem('sk_history', JSON.stringify(gameHistory));
@@ -80,87 +80,69 @@
                     let pHands = p.handsPlayed;
                     if (selectedWinners.includes(i)) { pPoints += points; pHands++; }
                     if (selectedLosers.includes(i)) { pPoints -= points; pHands++; }
-                    
-                    return {
-                        ...p,
-                        points: pPoints,
-                        handsPlayed: pHands,
-                        history: [...p.history, { round: gameHistory.length + 1, points: pPoints }]
-                    };
+                    return { ...p, points: pPoints, handsPlayed: pHands, history: [...p.history, { round: gameHistory.length + 1, points: pPoints }] };
                 });
 
-                const game = {
-                    winners: selectedWinners.map(i => players[i].name),
-                    losers: selectedLosers.map(i => players[i].name),
-                    points: points,
-                    mode: gameMode,
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                };
-
                 setPlayers(newPlayers);
-                setGameHistory([...gameHistory, game]);
-                setSelectedWinners([]);
-                setSelectedLosers([]);
-                setPointValue('');
+                setGameHistory([...gameHistory, { winners: selectedWinners.map(i => players[i].name), losers: selectedLosers.map(i => players[i].name), points, mode: gameMode, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
+                setSelectedWinners([]); setSelectedLosers([]); setPointValue('');
             };
 
             const getChartData = () => {
                 const rounds = Array.from({ length: gameHistory.length + 1 }, (_, i) => ({ name: i }));
-                players.forEach(p => {
-                    p.history.forEach(h => {
-                        if (rounds[h.round]) rounds[h.round][p.name] = h.points;
-                    });
-                });
+                players.forEach(p => p.history.forEach(h => { if (rounds[h.round]) rounds[h.round][p.name] = h.points; }));
                 return rounds;
             };
 
+            // Falls Recharts noch lädt, zeigen wir einen Platzhalter für den Graphen
             return (
                 <div className="max-w-4xl mx-auto p-4 space-y-6">
                     <header className="flex justify-between items-center py-6 border-b border-white/10">
-                        <h1 class="text-3xl font-black text-green-400">Schafkopf PRO</h1>
+                        <h1 className="text-3xl font-black text-green-400">Schafkopf PRO</h1>
                         <button onClick={() => {if(confirm('Alles löschen?')){localStorage.clear(); location.reload();}}} className="text-red-500 text-sm">Reset</button>
                     </header>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Spieler Setup */}
                         <section className="bg-slate-800 p-6 rounded-2xl shadow-xl">
                             <h2 className="text-xl font-bold mb-4">Spieler ({players.length}/6)</h2>
                             <div className="flex gap-2 mb-4">
-                                <input className="flex-1 p-2 rounded bg-slate-700 border-none" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} placeholder="Name..." />
+                                <input className="flex-1 p-2 rounded bg-slate-700 border-none text-white" value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} placeholder="Name..." />
                                 <button onClick={addPlayer} className="bg-green-600 px-4 rounded font-bold">+</button>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-col gap-2">
                                 {players.map((p, i) => (
-                                    <div key={i} className="bg-slate-700 px-3 py-1 rounded-full flex justify-between gap-4">
+                                    <div key={i} className="bg-slate-700 px-3 py-2 rounded-lg flex justify-between">
                                         <span>{p.name}</span>
-                                        <span className="font-bold">{(p.points/100).toFixed(2)}€</span>
+                                        <span className={`font-bold ${p.points >= 0 ? 'text-green-400' : 'text-red-400'}`}>{(p.points/100).toFixed(2)}€</span>
                                     </div>
                                 ))}
                             </div>
                         </section>
 
-                        {/* Spiel Eingabe */}
                         <section className="bg-slate-800 p-6 rounded-2xl shadow-xl">
                             <h2 className="text-xl font-bold mb-4">Neues Spiel</h2>
                             <div className="flex gap-2 mb-4">
-                                <button onClick={() => setGameMode('normal')} className={`flex-1 p-2 rounded ${gameMode === 'normal' ? 'bg-green-600' : 'bg-slate-700'}`}>Normal</button>
-                                <button onClick={() => setGameMode('solo')} className={`flex-1 p-2 rounded ${gameMode === 'solo' ? 'bg-purple-600' : 'bg-slate-700'}`}>Solo</button>
+                                <button onClick={() => {setGameMode('normal'); setSelectedWinners([]); setSelectedLosers([]);}} className={`flex-1 p-2 rounded ${gameMode === 'normal' ? 'bg-green-600' : 'bg-slate-700'}`}>Sauspiel</button>
+                                <button onClick={() => {setGameMode('solo'); setSelectedWinners([]); setSelectedLosers([]);}} className={`flex-1 p-2 rounded ${gameMode === 'solo' ? 'bg-purple-600' : 'bg-slate-700'}`}>Solo/Wenz</button>
                             </div>
                             <div className="space-y-4">
-                                <p className="text-xs text-gray-400">GEWINNER (Tippen):</p>
                                 <div className="flex flex-wrap gap-2">
                                     {players.map((p, i) => (
                                         <button key={i} onClick={() => toggleWinner(i)} className={`px-3 py-1 rounded border ${selectedWinners.includes(i) ? 'bg-green-600 border-green-400' : 'border-slate-600'}`}>{p.name}</button>
                                     ))}
                                 </div>
-                                <input type="number" className="w-full p-3 rounded bg-slate-700 text-xl font-bold" value={pointValue} onChange={e => setPointValue(e.target.value)} placeholder="Cent (z.B. 20)" />
-                                <button onClick={recordGame} className="w-full bg-green-500 p-4 rounded-xl font-black text-slate-900">EINTRAGEN</button>
+                                <div className="flex flex-wrap gap-2">
+                                    {players.map((p, i) => (
+                                        <button key={i} onClick={() => toggleLoser(i)} className={`px-3 py-1 rounded border ${selectedLosers.includes(i) ? 'bg-red-600 border-red-400' : 'border-slate-600'}`}>{p.name}</button>
+                                    ))}
+                                </div>
+                                <input type="number" className="w-full p-3 rounded bg-slate-700 text-xl font-bold" value={pointValue} onChange={e => setPointValue(e.target.value)} placeholder="ct (z.B. 10)" />
+                                <button onClick={recordGame} className="w-full bg-green-500 p-4 rounded-xl font-black text-slate-900 shadow-lg active:scale-95 transition-transform">SPIEL EINTRAGEN</button>
                             </div>
                         </section>
                     </div>
 
-                    {/* Chart */}
-                    {gameHistory.length > 0 && (
+                    {gameHistory.length > 0 && RechartsLib ? (
                         <section className="bg-slate-800 p-6 rounded-2xl h-80 shadow-xl">
                             <ResponsiveContainer width="100%" height="100%">
                                 <LineChart data={getChartData()}>
@@ -175,6 +157,8 @@
                                 </LineChart>
                             </ResponsiveContainer>
                         </section>
+                    ) : (
+                        gameHistory.length > 0 && <div className="text-center p-10 bg-slate-800 rounded-2xl">Lade Chart...</div>
                     )}
                 </div>
             );
