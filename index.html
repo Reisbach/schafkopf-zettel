@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Schafkopf Underground - Berlin Edition</title>
     
+    <!-- React, Babel & Supabase via CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,14 +18,14 @@
 
     <script type="text/babel">
         // ==========================================
-        // SUPABASE KONFIGURATION (DEINE LIVE-DATEN)
+        // SUPABASE KONFIGURATION
         // ==========================================
         const SUPABASE_URL = "https://hutbxkqhhgetbvnuqwce.supabase.co";
         const SUPABASE_KEY = "sb_publishable_reklbPGGESN7V2aAL059xQ_ib3jopaQ"; 
 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Hilfsfunktion: Generiert einen 6-stelligen Raum-Code
+        // Hilfsfunktion: 6-stelliger Raum-Code
         function generateRoomCode() {
             const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
             let code = '';
@@ -34,10 +35,16 @@
             return code;
         }
 
+        // Hilfsfunktion: Geheimer Owner-Token
+        function generateOwnerToken() {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
+
         function SchafkopfApp() {
             const [roomCode, setRoomCode] = React.useState("");
             const [inputCode, setInputCode] = React.useState("");
             const [gameState, setGameState] = React.useState({ game_count: 0, players: [] });
+            const [isOwner, setIsOwner] = React.useState(false);
             const [loading, setLoading] = React.useState(false);
             const [newPlayerName, setNewPlayerName] = React.useState("");
 
@@ -77,26 +84,46 @@
                 
                 if (data) {
                     setGameState({ game_count: data.game_count, players: data.players });
+                    
+                    // Prüfen, ob man der Besitzer dieses Raums ist
+                    const savedToken = localStorage.getItem(`schafkopf_owner_${code}`);
+                    if (savedToken && savedToken === data.owner_token) {
+                        setIsOwner(true);
+                    } else {
+                        setIsOwner(false);
+                    }
                 }
                 setLoading(false);
             }
 
             async function saveToSupabase(updatedPlayers, updatedCount) {
-                if (!roomCode) return;
-                await supabase
+                if (!roomCode || !isOwner) return; // Client-seitiger Schutz
+                
+                // Hole den geheimen Token aus dem Speicher des Browsers
+                const token = localStorage.getItem(`schafkopf_owner_${roomCode}`);
+
+                // Sende das Update an die DB und hänge den Token als Bedingung an
+                const { error } = await supabase
                     .from('schafkopf_sessions')
                     .update({ players: updatedPlayers, game_count: updatedCount })
-                    .eq('room_code', roomCode);
+                    .eq('room_code', roomCode)
+                    .eq('owner_token', token); // Das Schloss vor der Datenbank!
+
+                if (error) console.error("Schreibzugriff von der Datenbank verweigert:", error);
             }
 
             async function handleCreateRoom() {
                 setLoading(true);
                 const newCode = generateRoomCode();
+                const token = generateOwnerToken();
+                
                 const { error } = await supabase
                     .from('schafkopf_sessions')
-                    .insert([{ room_code: newCode, game_count: 0, players: [] }]);
+                    .insert([{ room_code: newCode, game_count: 0, players: [], owner_token: token }]);
 
                 if (!error) {
+                    localStorage.setItem(`schafkopf_owner_${newCode}`, token);
+                    setIsOwner(true);
                     setRoomCode(newCode);
                 } else {
                     alert("Fehler beim Erstellen des Raums. Bitte SQL-Befehl prüfen!");
@@ -112,11 +139,17 @@
                 setLoading(true);
                 const { data } = await supabase
                     .from('schafkopf_sessions')
-                    .select('room_code')
+                    .select('room_code, owner_token')
                     .eq('room_code', cleanCode)
                     .maybeSingle();
 
                 if (data) {
+                    const savedToken = localStorage.getItem(`schafkopf_owner_${cleanCode}`);
+                    if (savedToken && savedToken === data.owner_token) {
+                        setIsOwner(true);
+                    } else {
+                        setIsOwner(false); // Man ist nur normaler Zuschauer
+                    }
                     setRoomCode(cleanCode);
                 } else {
                     alert("Raum-Code wurde im Untergrund nicht gefunden!");
@@ -126,7 +159,7 @@
 
             function handleAddPlayer(e) {
                 e.preventDefault();
-                if (!newPlayerName.trim()) return;
+                if (!newPlayerName.trim() || !isOwner) return;
 
                 const newPlayer = {
                     name: newPlayerName.trim(),
@@ -140,8 +173,9 @@
                 saveToSupabase(updatedPlayers, gameState.game_count);
             }
 
-            // Test-Funktion für die Punkte-Mechanik
             function handleAddPointsTest(index, amount) {
+                if (!isOwner) return; 
+                
                 const updatedPlayers = gameState.players.map((player, i) => {
                     if (i === index) {
                         const nextPoints = player.points + amount;
@@ -162,7 +196,7 @@
             if (loading) {
                 return (
                     <div class="flex items-center justify-center min-h-screen bg-slate-950">
-                        <p class="text-xl text-red-500 font-mono tracking-widest animate-pulse">VERBINDUNG ZUM UNTERGRUND WIRD AUFGEBAUT...</p>
+                        <p class="text-xl text-red-500 font-mono tracking-widest animate-pulse">VERBINDUNG ZUM UNTERGRUND...</p>
                     </div>
                 );
             }
@@ -180,12 +214,12 @@
                             onClick={handleCreateRoom}
                             class="w-full bg-red-700 hover:bg-red-600 active:bg-red-800 py-3 rounded-xl font-bold transition text-white tracking-wide shadow-lg shadow-red-900/20"
                         >
-                            ➕ Neuen Spielraum erstellen
+                            ➕ Neuen Spielraum erstellen (Als Spätimeister)
                         </button>
 
                         <div class="relative flex py-5 items-center">
                             <div class="flex-grow border-t border-slate-800"></div>
-                            <span class="flex-shrink mx-4 text-slate-500 text-xs font-mono tracking-widest">ODER BEITRETEN</span>
+                            <span class="flex-shrink mx-4 text-slate-500 text-xs font-mono tracking-widest">ODER ALS ATZE BEITRETEN</span>
                             <div class="flex-grow border-t border-slate-800"></div>
                         </div>
 
@@ -218,43 +252,56 @@
                                 <h1 class="text-xl font-black text-white uppercase tracking-tight">Schafkopf Underground</h1>
                                 <span class="text-[10px] bg-red-950 text-red-400 border border-red-950 px-1.5 py-0.5 rounded font-mono">BERLIN</span>
                             </div>
-                            <p class="text-xs text-slate-400 mt-0.5 font-mono">Runden absolviert: <span class="text-white font-bold">{gameState.game_count}</span></p>
+                            <p class="text-xs text-slate-400 mt-0.5 font-mono">
+                                Runden absolviert: <span class="text-white font-bold">{gameState.game_count}</span>
+                                {isOwner ? (
+                                    <span class="ml-3 text-emerald-400 font-bold">👑 Du bist Spätimeister</span>
+                                ) : (
+                                    <span class="ml-3 text-amber-500 font-bold">👀 Zuschauer-Modus</span>
+                                )}
+                            </p>
                         </div>
                         <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-center sm:text-right min-w-[150px]">
-                            <span class="text-[10px] block text-slate-500 font-mono uppercase tracking-wider">Spätimeister Code</span>
+                            <span class="text-[10px] block text-slate-500 font-mono uppercase tracking-wider">Raum Code</span>
                             <span class="font-mono text-xl font-black text-amber-400 tracking-widest lowercase">
                                 {roomCode}
                             </span>
                         </div>
                     </div>
 
-                    {/* Steuerung & Tarifbereich */}
-                    <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-6 flex flex-wrap gap-4 items-center justify-between">
-                        <form onSubmit={handleAddPlayer} class="flex gap-2 w-full md:w-auto md:flex-1 max-w-md">
-                            <input 
-                                type="text"
-                                value={newPlayerName}
-                                onChange={(e) => setNewPlayerName(e.target.value)}
-                                placeholder="Spieler Name..."
-                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-700"
-                            />
-                            <button type="submit" class="bg-red-700 hover:bg-red-600 px-4 rounded-xl font-bold text-xs whitespace-nowrap text-white transition">
-                                + Atze
-                            </button>
-                        </form>
-                        
-                        <div class="flex gap-2 text-xs font-mono">
-                            <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Rückgängig</button>
-                            <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition">Reset</button>
+                    {/* Steuerung nur für den Spätimeister (isOwner) */}
+                    {isOwner ? (
+                        <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-6 flex flex-wrap gap-4 items-center justify-between">
+                            <form onSubmit={handleAddPlayer} class="flex gap-2 w-full md:w-auto md:flex-1 max-w-md">
+                                <input 
+                                    type="text"
+                                    value={newPlayerName}
+                                    onChange={(e) => setNewPlayerName(e.target.value)}
+                                    placeholder="Spieler Name..."
+                                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-700"
+                                />
+                                <button type="submit" class="bg-red-700 hover:bg-red-600 px-4 rounded-xl font-bold text-xs whitespace-nowrap text-white transition">
+                                    + Atze
+                                </button>
+                            </form>
+                            
+                            <div class="flex gap-2 text-xs font-mono">
+                                <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Rückgängig</button>
+                                <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition">Reset</button>
+                            </div>
                         </div>
-                    </div>
+                    ) : (
+                        <div class="bg-blue-950/30 border border-blue-900/50 p-3 rounded-xl mb-6 text-center text-xs font-mono text-blue-400">
+                            🔒 Du bist als Gast beigetreten. Nur der Raumbesitzer kann Punkte eintragen. Deine Ansicht aktualisiert sich live!
+                        </div>
+                    )}
 
                     {/* Die Atzen (Spielerübersicht) */}
                     <h2 class="text-xs font-bold font-mono tracking-widest uppercase text-slate-500 mb-3 px-1">Die Atzen am Tisch</h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {gameState.players.length === 0 ? (
                             <div class="text-slate-500 italic col-span-2 text-center py-12 bg-slate-900/50 rounded-2xl border border-dashed border-slate-800">
-                                Keine Atzen am Tisch. Trage oben die Spieler ein, um das Sauspiel zu starten!
+                                Keine Atzen am Tisch. {isOwner ? 'Trage oben die Spieler ein!' : 'Warte darauf, dass der Spätimeister Spieler hinzufügt.'}
                             </div>
                         ) : (
                             gameState.players.map((player, index) => {
@@ -263,7 +310,6 @@
                                 
                                 return (
                                     <div key={index} class="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-md relative overflow-hidden">
-                                        {/* Status Tag */}
                                         <div class="absolute top-2 right-2 flex gap-1">
                                             {isBonze && <span class="text-[9px] font-mono uppercase bg-emerald-950 text-emerald-400 border border-emerald-900 px-1.5 py-0.5 rounded font-bold">Der Bonze</span>}
                                             {isOpfer && <span class="text-[9px] font-mono uppercase bg-rose-950 text-rose-400 border border-rose-900 px-1.5 py-0.5 rounded font-bold">Opfer</span>}
@@ -276,25 +322,28 @@
                                             </p>
                                         </div>
 
-                                        {/* Steuerung für diesen Spieler */}
                                         <div class="border-t border-slate-950 pt-3 flex items-center justify-between gap-2">
-                                            <span class="text-[10px] font-mono text-slate-500 truncate max-w-[120px]">
-                                                Hst: {player.history.map(h => h.val).join(" ➔ ")}
+                                            <span class="text-[10px] font-mono text-slate-500 truncate max-w-[150px]">
+                                                Verlauf: {player.history.map(h => h.val).join(" ➔ ")}
                                             </span>
-                                            <div class="flex gap-1">
-                                                <button 
-                                                    onClick={() => handleAddPointsTest(index, 5)}
-                                                    class="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-900 text-emerald-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
-                                                >
-                                                    +5€
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleAddPointsTest(index, -5)}
-                                                    class="bg-rose-950/60 hover:bg-rose-900 border border-rose-900 text-rose-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
-                                                >
-                                                    -5€
-                                                </button>
-                                            </div>
+                                            
+                                            {/* Plus/Minus Buttons werden NUR dem echten Spätimeister eingeblendet */}
+                                            {isOwner && (
+                                                <div class="flex gap-1">
+                                                    <button 
+                                                        onClick={() => handleAddPointsTest(index, 5)}
+                                                        class="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-900 text-emerald-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
+                                                    >
+                                                        +5€
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleAddPointsTest(index, -5)}
+                                                        class="bg-rose-950/60 hover:bg-rose-900 border border-rose-900 text-rose-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
+                                                    >
+                                                        -5€
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
@@ -312,9 +361,6 @@
             );
         }
 
-        // ==========================================
-        // DIE FIX-ZEILE: RICHTIGES RENDERING FÜR REACT 18
-        // ==========================================
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<SchafkopfApp />);
     </script>
