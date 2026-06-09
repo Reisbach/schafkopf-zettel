@@ -1,230 +1,495 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Schafkopf Berlin Underground</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Schafkopf Berlin Edition</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Supabase CDN hinzugefügt -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Inter:wght@400;700;900&display=swap');
-
-body {
-    margin:0;
-    font-family: Inter, sans-serif;
-    background:#111;
-    color:white;
-    overflow-x:hidden;
-}
-
-.font-headline{font-family:Anton;}
-.font-graffiti{font-family:"Permanent Marker";}
-
-.berlin-sky {
-    position:fixed;
-    inset:0;
-    background:linear-gradient(to bottom,#2e1065,#7c3aed,#fb923c,#111);
-    z-index:-2;
-}
-
-.concrete-wall{
-    background:#e5e5e5;
-    color:black;
-    border:3px solid white;
-    padding:10px;
-}
-</style>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Permanent+Marker&family=Inter:wght@400;700;900&display=swap');
+        :root {
+            --sunset-purple: #4c1d95;
+            --sunset-orange: #f97316;
+            --wall-grey: #d4d4d8;
+            --berlin-red: #ff0033;
+        }
+        body {
+            background-color: #111;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            color: #fff;
+        }
+        .font-graffiti { font-family: 'Permanent Marker', cursive; }
+        .font-headline { font-family: 'Anton', sans-serif; }
+        .berlin-sky {
+            background: linear-gradient(to bottom, #2e1065 0%, #7c3aed 40%, #fb923c 80%, #111 100%);
+            position: fixed;
+            top: 0; left: 0; right: 0; height: 100vh;
+            z-index: -2;
+        }
+        .concrete-wall {
+            background-color: #e5e5e5;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.15'/%3E%3C/svg%3E");
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.5);
+            border: 4px solid #fff;
+            position: relative;
+        }
+        .text-stroke {
+            -webkit-text-stroke: 2px black;
+            color: white;
+            paint-order: stroke fill;
+        }
+        .toast-slide { animation: slideDown 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes slideDown { from { transform: translate(-50%, -200%); } to { transform: translate(-50%, 20px); } }
+        @keyframes hoist { 0% { transform: translateY(110%); } 100% { transform: translateY(0); } }
+        .animate-hoist { animation: hoist 3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    </style>
 </head>
+<body class="min-h-screen pb-24">
+    <div class="berlin-sky"></div>
+    <div style="position: fixed; bottom: 0; left: 0; width: 100%; height: 35vh; background: url('https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Skyline_Berlin.svg/2560px-Skyline_Berlin.svg.png') repeat-x bottom center; background-size: cover; opacity: 0.3; z-index: -1; filter: brightness(0);"></div>
 
-<body>
-<div class="berlin-sky"></div>
-<div id="root"></div>
+    <div id="root"></div>
 
-<script type="text/babel">
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-const SUPABASE_URL = "https://hutbxkqhhgetbvnuqwce.supabase.co";
-const SUPABASE_KEY = "YOUR_KEY";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // --- SUPABASE INSTANZ ---
+        const SUPABASE_URL = "https://hutbxkqhhgetbvnuqwce.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_reklbPGGESN7V2aAL059xQ_ib3jopaQ";
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const generateRoomCode = () =>
-    Array.from({length:6},()=> "abcdefghijklmnopqrstuvwxyz0123456789"[Math.random()*36|0]).join("");
+        // Generatoren für DB-Struktur
+        function generateRoomCode() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            return code;
+        }
+        function generateOwnerToken() {
+            return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        }
 
-const generateOwnerToken = () =>
-    Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
+        const TvTowerSVG = () => (
+            <svg viewBox="0 0 100 300" className="w-full h-full drop-shadow-[0_0_15px_rgba(255,255,255,0.6)]">
+                <line x1="50" y1="10" x2="50" y2="80" stroke="white" strokeWidth="2" />
+                <circle cx="50" cy="90" r="18" fill="white" />
+                <path d="M40 110 L60 110 L80 280 L20 280 Z" fill="white" />
+            </svg>
+        );
 
-function App(){
+        const Celebration = ({ onComplete }) => {
+            useEffect(() => { const t = setTimeout(onComplete, 3500); return () => clearTimeout(t); }, [onComplete]);
+            return (
+                <div className="fixed inset-0 z-[100] flex items-end justify-center pointer-events-none backdrop-blur-sm bg-black/40">
+                    <div className="absolute top-1/4 w-full text-center z-20 animate-bounce">
+                        <h1 className="text-6xl md:text-8xl font-graffiti text-[#ff0033] drop-shadow-[4px_4px_0_#fff] transform -rotate-3">
+                            BERLIN<br/>LEBT!
+                        </h1>
+                    </div>
+                    <div className="w-3 h-full bg-zinc-700 border-x border-zinc-900 relative z-10"></div>
+                    <div className="absolute bottom-10 animate-hoist z-10" style={{ left: '50%' }}>
+                        <div className="ml-1 w-64 h-40 bg-white flex items-center justify-center shadow-2xl relative border-2 border-black">
+                            <div className="absolute inset-0 border-y-8 border-red-600"></div>
+                            <span className="text-6xl">🐻</span>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
-const [roomCode,setRoomCode]=React.useState("");
-const [inputCode,setInputCode]=React.useState("");
-const [isOwner,setIsOwner]=React.useState(false);
+        const Toast = ({ msg, type, onClose }) => {
+            useEffect(() => { const t = setTimeout(onClose, 3000); return () => clearTimeout(t); }, [onClose]);
+            return (
+                <div className={`fixed top-0 left-1/2 z-50 px-6 py-3 font-graffiti text-xl tracking-wider shadow-xl transform -translate-x-1/2 toast-slide border-4 border-black text-black ${type === 'error' ? 'bg-rose-500' : 'bg-green-400'}`}>
+                    {msg}
+                </div>
+            );
+        };
 
-const [gameState,setGameState]=React.useState({
-    game_count:0,
-    players:[]
-});
+        function App() {
+            const [ready, setReady] = useState(false);
+            const [roomCode, setRoomCode] = useState("");
+            const [inputCode, setInputCode] = useState("");
+            const [isOwner, setIsOwner] = useState(false);
+            
+            const [players, setPlayers] = useState([]);
+            const [name, setName] = useState('');
+            const [winners, setWinners] = useState([]);
+            const [losers, setLosers] = useState([]);
+            const [points, setPoints] = useState('10');
+            const [mode, setMode] = useState('normal'); 
+            const [gameCount, setGameCount] = useState(0);
+            const [gameHistory, setGameHistory] = useState([]);
+            const [toast, setToast] = useState(null); 
+            const [showCeleb, setShowCeleb] = useState(false);
 
-const [name,setName]=React.useState("");
+            // Recharts Lade-Check
+            useEffect(() => {
+                const check = setInterval(() => { 
+                    if (window.Recharts && window.Recharts.LineChart) { 
+                        setReady(true); 
+                        clearInterval(check); 
+                    } 
+                }, 100);
+                return () => clearInterval(check);
+            }, []);
 
-React.useEffect(()=>{
-if(!roomCode) return;
+            // Realtime Synchronisation & Initialer DB-Pull
+            useEffect(() => {
+                if (!roomCode) return;
 
-fetchRoom();
+                const fetchState = async () => {
+                    const { data } = await supabase.from('schafkopf_sessions').select('*').eq('room_code', roomCode).maybeSingle();
+                    if (data) {
+                        setGameCount(data.game_count);
+                        setPlayers(data.players || []);
+                        setGameHistory(data.game_history || []);
+                        
+                        const savedToken = localStorage.getItem(`schafkopf_owner_${roomCode}`);
+                        setIsOwner(savedToken === data.owner_token);
+                    }
+                };
+                fetchState();
 
-const channel = supabase.channel(`room-${roomCode}`)
-.on("postgres_changes",
-{event:"UPDATE",schema:"public",table:"schafkopf_sessions",filter:`room_code=eq.${roomCode}`},
-(payload)=>{
-setGameState({
-game_count:payload.new.game_count,
-players:payload.new.players
-});
-})
-.subscribe();
+                const channel = supabase
+                    .channel(`public:schafkopf_sessions:room_code=eq.${roomCode}`)
+                    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'schafkopf_sessions', filter: `room_code=eq.${roomCode}` }, (payload) => {
+                        setGameCount(payload.new.game_count);
+                        setPlayers(payload.new.players || []);
+                        setGameHistory(payload.new.game_history || []);
+                    })
+                    .subscribe();
 
-return ()=> supabase.removeChannel(channel);
-},[roomCode]);
+                return () => { supabase.removeChannel(channel); };
+            }, [roomCode]);
 
-async function fetchRoom(){
-const {data}=await supabase.from("schafkopf_sessions")
-.select("*")
-.eq("room_code",roomCode)
-.single();
+            const saveToSupabase = async (nextPlayers, nextCount, nextHistory) => {
+                if (!isOwner || !roomCode) return;
+                const token = localStorage.getItem(`schafkopf_owner_${roomCode}`);
+                await supabase
+                    .from('schafkopf_sessions')
+                    .update({ players: nextPlayers, game_count: nextCount, game_history: nextHistory })
+                    .eq('room_code', roomCode)
+                    .eq('owner_token', token);
+            };
 
-if(data){
-setGameState({game_count:data.game_count,players:data.players});
-const token=localStorage.getItem("owner_"+roomCode);
-setIsOwner(token===data.owner_token);
-}
-}
+            const handleCreateRoom = async () => {
+                const newCode = generateRoomCode();
+                const token = generateOwnerToken();
+                const { error } = await supabase.from('schafkopf_sessions').insert([{ room_code: newCode, game_count: 0, players: [], game_history: [], owner_token: token }]);
+                if (!error) {
+                    localStorage.setItem(`schafkopf_owner_${newCode}`, token);
+                    setIsOwner(true);
+                    setRoomCode(newCode);
+                }
+            };
 
-async function createRoom(){
-const code=generateRoomCode();
-const token=generateOwnerToken();
+            const handleJoinRoom = async (e) => {
+                e.preventDefault();
+                const cleanCode = inputCode.trim().toLowerCase();
+                if (cleanCode.length !== 6) return;
+                const { data } = await supabase.from('schafkopf_sessions').select('room_code, owner_token').eq('room_code', cleanCode).maybeSingle();
+                if (data) {
+                    const savedToken = localStorage.getItem(`schafkopf_owner_${cleanCode}`);
+                    setIsOwner(savedToken === data.owner_token);
+                    setRoomCode(cleanCode);
+                } else {
+                    showToast("Raum nicht gefunden!", "error");
+                }
+            };
 
-await supabase.from("schafkopf_sessions").insert([{
-room_code:code,
-game_count:0,
-players:[],
-owner_token:token
-}]);
+            const stats = useMemo(() => {
+                if (players.length === 0) return null;
+                let soloKing = { name: '-', count: 0 };
+                let highRoller = { name: '-', val: 0 };
+                let pechvogel = { name: '-', val: 0 };
 
-localStorage.setItem("owner_"+code,token);
-setRoomCode(code);
-setIsOwner(true);
-}
+                const soloCounts = {};
+                gameHistory.forEach(g => {
+                    if (g.mode === 'solo') g.winners.forEach(w => soloCounts[w] = (soloCounts[w] || 0) + 1);
+                });
+                Object.entries(soloCounts).forEach(([n, c]) => { if (c > soloKing.count) soloKing = { name: n, count: c }; });
 
-async function joinRoom(e){
-e.preventDefault();
-setRoomCode(inputCode.trim().toLowerCase());
-}
+                players.forEach(p => {
+                    if (p.history && p.history.length > 1) {
+                        for (let i = 1; i < p.history.length; i++) {
+                            const diff = p.history[i].val - p.history[i-1].val;
+                            if (diff > highRoller.val) highRoller = { name: p.name, val: diff };
+                            if (diff < pechvogel.val) pechvogel = { name: p.name, val: diff };
+                        }
+                    }
+                });
+                return { soloKing, highRoller, pechvogel };
+            }, [players, gameHistory]);
 
-async function update(players,count){
-const token=localStorage.getItem("owner_"+roomCode);
+            const showToast = (msg, type = 'success') => setToast({ msg, type });
 
-await supabase.from("schafkopf_sessions")
-.update({players:players,game_count:count})
-.eq("room_code",roomCode)
-.eq("owner_token",token);
-}
+            const addPlayer = () => {
+                if (!isOwner) return showToast("Zuschauer dürfen nichts ändern", "error");
+                if (!name.trim() || players.length >= 6) return;
+                const nextPlayers = [...players, { name: name.trim(), points: 0, history: [{ round: 0, val: 0 }] }];
+                setPlayers(nextPlayers);
+                setName('');
+                saveToSupabase(nextPlayers, gameCount, gameHistory);
+            };
 
-function addPlayer(){
-if(!isOwner||!name.trim())return;
+            const kickPlayer = (idx) => {
+                if (!isOwner) return showToast("Zuschauer dürfen nichts ändern", "error");
+                if (confirm("Wirklich rauswerfen?")) {
+                    const nextPlayers = players.filter((_, i) => i !== idx);
+                    setPlayers(nextPlayers);
+                    setWinners([]); setLosers([]);
+                    saveToSupabase(nextPlayers, gameCount, gameHistory);
+                }
+            };
 
-const newPlayers=[...gameState.players,{
-name:name.trim(),
-points:0,
-history:[{round:0,val:0}]
-}];
+            const toggleWinner = (p) => {
+                if (!isOwner) return;
+                if (losers.includes(p)) return;
+                setWinners(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+            };
+            const toggleLoser = (p) => {
+                if (!isOwner) return;
+                if (winners.includes(p)) return;
+                setLosers(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
+            };
 
-setGameState({...gameState,players:newPlayers});
-setName("");
-update(newPlayers,gameState.game_count);
-}
+            const recordGame = () => {
+                if (!isOwner) return showToast("Zuschauer dürfen nichts ändern", "error");
+                const val = parseInt(points);
+                if (mode === 'normal' && (winners.length !== 2 || losers.length !== 2)) return showToast("2 gegen 2!", "error");
+                if (mode === 'solo' && !((winners.length === 1 && losers.length === 3) || (winners.length === 3 && losers.length === 1))) return showToast("1 gegen 3!", "error");
 
-function addPoints(i,val){
-if(!isOwner)return;
+                const nextRound = gameCount + 1;
+                const newGameEntry = { round: nextRound, mode, winners, losers, points: val };
+                const nextHistory = [...gameHistory, newGameEntry];
 
-const players=gameState.players.map((p,idx)=>{
-if(idx===i){
-const newVal=p.points+val;
-return {...p,points:newVal,history:[...p.history,{round:p.history.length,val:newVal}]};
-}
-return p;
-});
+                const nextPlayers = players.map(p => {
+                    let change = 0;
+                    if (mode === 'normal') {
+                        if (winners.includes(p.name)) change = val;
+                        if (losers.includes(p.name)) change = -val;
+                    } else {
+                        if (winners.length === 1 && winners.includes(p.name)) change = val * 3;
+                        else if (winners.length === 1 && losers.includes(p.name)) change = -val;
+                        if (losers.length === 1 && losers.includes(p.name)) change = -(val * 3);
+                        else if (losers.length === 1 && winners.includes(p.name)) change = val;
+                    }
+                    return { ...p, points: p.points + change, history: [...(p.history || []), { round: nextRound, val: p.points + change }] };
+                });
 
-const count=gameState.game_count+1;
-setGameState({players,game_count:count});
-update(players,count);
-}
+                setGameHistory(nextHistory);
+                setPlayers(nextPlayers);
+                setGameCount(nextRound);
+                setWinners([]); setLosers([]);
+                setShowCeleb(true);
+                saveToSupabase(nextPlayers, nextRound, nextHistory);
+            };
 
-if(!roomCode){
-return(
-<div className="flex items-center justify-center h-screen">
-<div className="concrete-wall w-96">
-<h1 className="font-headline text-4xl text-center">BERLIN</h1>
+            const undoLast = () => {
+                if (!isOwner) return showToast("Zuschauer dürfen nichts ändern", "error");
+                if (gameCount === 0) return;
+                if (confirm("Letztes Spiel löschen?")) {
+                    const prevRound = gameCount - 1;
+                    const nextHistory = gameHistory.filter(g => g.round <= prevRound);
+                    const nextPlayers = players.map(p => ({
+                        ...p,
+                        history: p.history.filter(h => h.round <= prevRound),
+                        points: (p.history.find(h => h.round === prevRound) || {val: 0}).val
+                    }));
+                    setGameHistory(nextHistory);
+                    setPlayers(nextPlayers);
+                    setGameCount(prevRound);
+                    showToast("Runde gelöscht");
+                    saveToSupabase(nextPlayers, prevRound, nextHistory);
+                }
+            };
 
-<button onClick={createRoom} className="w-full bg-red-600 text-white p-3 mt-4">
-Raum erstellen
-</button>
+            if (!ready) return <div className="h-screen flex items-center justify-center text-white font-graffiti text-3xl animate-pulse">Lade Späti...</div>;
 
-<form onSubmit={joinRoom} className="flex gap-2 mt-4">
-<input className="flex-1 border p-2"
-value={inputCode}
-onChange={e=>setInputCode(e.target.value)}
-placeholder="Code"/>
-<button className="bg-black text-white px-3">Join</button>
-</form>
-</div>
-</div>
-);
-}
+            // LOBBY (WENN NOCH KEIN RAUM GEWÄHLT IST)
+            if (!roomCode) {
+                return (
+                    <div className="max-w-md mx-auto mt-20 p-6 bg-black border-4 border-white text-center rounded shadow-2xl">
+                        <h1 className="font-headline text-5xl uppercase tracking-tighter text-[#ff0033] mb-6">Schafkopf Lobby</h1>
+                        <button onClick={handleCreateRoom} className="w-full bg-[#ff0033] text-white font-graffiti text-xl py-3 border-2 border-black shadow-[4px_4px_0_white] hover:translate-y-0.5 transition-all mb-6">
+                            NEUEN RAUM ERSTELLEN
+                        </button>
+                        <div className="font-mono text-xs text-gray-500 mb-4">ODER RAUM BEITRETEN</div>
+                        <form onSubmit={handleJoinRoom} className="flex gap-2">
+                            <input className="flex-1 bg-transparent border-b-4 border-white font-mono text-center tracking-widest text-2xl outline-none lowercase text-orange-400" maxLength="6" placeholder="code12" value={inputCode} onChange={e => setInputCode(e.target.value)} />
+                            <button type="submit" className="bg-white text-black font-graffiti px-4 py-1">GO</button>
+                        </form>
+                    </div>
+                );
+            }
 
-return(
-<div className="max-w-4xl mx-auto p-4">
+            const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
 
-<div className="concrete-wall mb-4">
-<h1 className="font-headline text-3xl">SCHAFKOPF BERLIN</h1>
-<p>Room: {roomCode}</p>
-</div>
+            const chartData = Array.from({ length: gameCount + 1 }, (_, i) => {
+                const row = { name: i };
+                players.forEach(p => {
+                    const entry = p.history?.find(h => h.round === i) || [...(p.history || [])].reverse().find(h => h.round < i);
+                    row[p.name] = entry ? entry.val : 0;
+                });
+                return row;
+            });
 
-{isOwner &&
-<div className="flex gap-2 mb-4">
-<input className="border p-2 flex-1"
-value={name}
-onChange={e=>setName(e.target.value)}
-placeholder="Spieler"/>
-<button onClick={addPlayer} className="bg-red-600 text-white px-3">+</button>
-</div>
-}
+            return (
+                <div className="max-w-4xl mx-auto p-4 space-y-8 relative">
+                    {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+                    {showCeleb && <Celebration onComplete={() => setShowCeleb(false)} />}
 
-<div className="grid gap-3">
-{gameState.players.map((p,i)=>(
-<div key={i} className="concrete-wall flex justify-between">
-<div>{p.name}</div>
-<div>{p.points}</div>
-{isOwner &&
-<div className="flex gap-1">
-<button onClick={()=>addPoints(i,5)}>+5</button>
-<button onClick={()=>addPoints(i,-5)}>-5</button>
-</div>}
-</div>
-))}
-</div>
+                    <header className="text-center py-10 relative">
+                        <div className="absolute top-0 left-1/2 transform -translate-x-1/2 -z-10 opacity-30 w-32 md:w-48 h-96">
+                            <TvTowerSVG />
+                        </div>
+                                                
+                        {/* Dezente Raumcode-Anzeige oben rechts */}
+                        <div className="absolute top-2 right-2 bg-black border border-white/20 p-2 rounded text-right font-mono text-xs">
+                            <span className="text-gray-500">RAUM:</span> <span className="text-orange-400 font-bold tracking-wider">{roomCode}</span>
+                            <br/>
+                            <span className="text-[10px]">{isOwner ? "👑 Admin" : "👀 Gast"}</span>
+                        </div>
 
-</div>
-);
+                        <h1 className="font-headline text-7xl md:text-9xl tracking-tighter uppercase relative z-10 leading-none">
+                            <span className="text-[#ff0033] drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">BERLIN</span><br/>
+                            <span className="text-transparent text-stroke drop-shadow-xl">EDITION</span>
+                        </h1>
+                        <div className="mt-4 inline-block bg-black text-white px-4 py-1 font-mono text-sm tracking-[0.3em] uppercase border border-white">
+                            Schafkopf Underground
+                        </div>
+                    </header>
 
-}
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="concrete-wall p-4 flex flex-col items-center justify-center text-black transform rotate-1 group hover:scale-105 transition-transform">
+                            <div className="font-graffiti text-xs text-gray-500 mb-1">SpÄTIMEISTER</div>
+                            <div className="font-headline text-3xl text-[#ff0033]">{stats?.soloKing.name}</div>
+                            <div className="font-mono text-[10px] text-gray-600 border-t border-black mt-1 w-full text-center">{stats?.soloKing.count} Soli</div>
+                        </div>
+                        <div className="concrete-wall p-4 flex flex-col items-center justify-center text-black transform -rotate-1 group hover:scale-105 transition-transform">
+                            <div className="font-graffiti text-xs text-gray-500 mb-1">DER BONZE</div>
+                            <div className="font-headline text-3xl text-purple-600">{stats?.highRoller.name}</div>
+                            <div className="font-mono text-[10px] text-gray-600 border-t border-black mt-1 w-full text-center">+{stats?.highRoller.val} €</div>
+                        </div>
+                        <div className="concrete-wall p-4 flex flex-col items-center justify-center text-black transform rotate-1 group hover:scale-105 transition-transform">
+                            <div className="font-graffiti text-xs text-gray-500 mb-1">OPFER</div>
+                            <div className="font-headline text-3xl text-black">{stats?.pechvogel.name}</div>
+                            <div className="font-mono text-[10px] text-gray-600 border-t border-black mt-1 w-full text-center">{stats?.pechvogel.val} €</div>
+                        </div>
+                    </div>
 
-const root=ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App/>);
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="concrete-wall p-6 min-h-[300px]">
+                            <h2 className="font-graffiti text-3xl text-black mb-6 transform -rotate-2 inline-block border-b-4 border-[#ff0033]">
+                                DIE ATZEN
+                            </h2>
+                            <div className="space-y-3">
+                                {players.map((p, i) => (
+                                    <div key={i} className="flex justify-between items-center bg-white/50 border-2 border-black p-2 shadow-md">
+                                        <div className="flex items-center gap-3">
+                                            {isOwner && <button onClick={() => kickPlayer(i)} className="text-black hover:text-red-600 font-bold px-2">X</button>}
+                                            <div className={`w-8 h-8 rounded-full border-2 border-black flex items-center justify-center font-bold text-xs text-white ${['bg-purple-600', 'bg-orange-500', 'bg-pink-500', 'bg-cyan-500'][i % 4]}`}>
+                                                {p.name.substring(0,2)}
+                                            </div>
+                                            <span className="font-headline text-xl text-black uppercase">{p.name}</span>
+                                        </div>
+                                        <span className={`font-mono font-bold text-lg ${p.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {(p.points / 100).toFixed(2)}
+                                        </span>
+                                    </div>
+                                ))}
+                                {isOwner && players.length < 6 && (
+                                    <div className="flex gap-2 mt-4">
+                                        <input className="flex-1 bg-transparent border-b-4 border-black font-graffiti text-black text-xl placeholder-gray-500 outline-none px-2" value={name} onChange={e => setName(e.target.value)} placeholder="Wer noch?" onKeyDown={e => e.key === 'Enter' && addPlayer()} />
+                                        <button onClick={addPlayer} className="bg-black text-white font-bold px-4 py-1 transform rotate-3 hover:rotate-0 transition-transform font-graffiti">+</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
-</script>
+                        <div className="flex flex-col gap-6">
+                            <div className="bg-black p-2 flex gap-2 rounded-lg shadow-2xl border border-white/20">
+                                <button onClick={() => {if(isOwner){setMode('normal'); setWinners([]); setLosers([]);}}} className={`flex-1 py-3 font-headline text-xl tracking-wider transition-all rounded ${mode === 'normal' ? 'bg-[#ff0033] text-white' : 'text-gray-500 hover:text-white'}`}>SAUSPIEL</button>
+                                <button onClick={() => {if(isOwner){setMode('solo'); setWinners([]); setLosers([]);}}} className={`flex-1 py-3 font-headline text-xl tracking-wider transition-all rounded ${mode === 'solo' ? 'bg-purple-600 text-white' : 'text-gray-500 hover:text-white'}`}>SOLO</button>
+                            </div>
+
+                            <div className="concrete-wall p-4 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="font-mono text-[10px] text-black text-center mb-2 uppercase tracking-widest">Gewinner</p>
+                                    <div className="flex flex-col gap-2">
+                                        {players.map(p => (
+                                            <button key={p.name} onClick={() => toggleWinner(p.name)} className={`py-2 font-headline uppercase border-2 border-black transition-all ${winners.includes(p.name) ? 'bg-green-500 text-white transform scale-105' : 'bg-transparent text-gray-500 opacity-50'}`}>
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="font-mono text-[10px] text-black text-center mb-2 uppercase tracking-widest">Verlierer</p>
+                                    <div className="flex flex-col gap-2">
+                                        {players.map(p => (
+                                            <button key={p.name} onClick={() => toggleLoser(p.name)} className={`py-2 font-headline uppercase border-2 border-black transition-all ${losers.includes(p.name) ? 'bg-red-500 text-white transform scale-105' : 'bg-transparent text-gray-500 opacity-50'}`}>
+                                                {p.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="bg-black border-2 border-white/30 rounded w-24 flex items-center justify-center relative">
+                                    <span className="absolute top-1 left-2 text-[8px] text-gray-400">TARIF</span>
+                                    <input type="number" disabled={!isOwner} className="bg-transparent text-white font-headline text-2xl text-center w-full outline-none" value={points} onChange={e => setPoints(e.target.value)} />
+                                </div>
+                                <button onClick={recordGame} className="flex-1 bg-gradient-to-r from-[#ff0033] to-purple-600 text-white font-black text-2xl py-4 shadow-[4px_4px_0_white] hover:translate-y-1 hover:shadow-none transition-all uppercase italic">
+                                    EINTRAGEN
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {gameCount > 0 && (
+                        <div className="bg-black/80 backdrop-blur border border-white/10 p-4 rounded-xl shadow-2xl">
+                            <h3 className="text-center font-mono text-xs text-gray-400 mb-4 tracking-[0.5em] uppercase">Spielverlauf</h3>
+                            <div className="h-64 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
+                                        <XAxis dataKey="name" stroke="#666" fontSize={10} axisLine={false} tickLine={false} />
+                                        <YAxis stroke="#666" fontSize={10} axisLine={false} tickLine={false} tickFormatter={v => `${(v/100).toFixed(0)}`} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#000', border: '2px solid white', color: '#fff', fontFamily: 'monospace' }} />
+                                        {players.map((p, i) => (
+                                            <Line key={p.name} type="monotone" dataKey={p.name} stroke={['#ec4899', '#f97316', '#a855f7', '#06b6d4'][i % 4]} strokeWidth={3} dot={false} />
+                                        ))}
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+
+                    <footer className="flex justify-center gap-6 mt-12 pb-8">
+                        {isOwner && <button onClick={undoLast} className="text-xs text-gray-500 hover:text-white uppercase tracking-widest">Rückgängig</button>}
+                        <button onClick={() => { setRoomCode(""); setWinners([]); setLosers([]); }} className="text-xs text-gray-500 hover:text-white uppercase tracking-widest">Raum verlassen</button>
+                        {isOwner && <button onClick={async () => {if(confirm("Gesamten Raum in DB löschen?")) { await supabase.from('schafkopf_sessions').delete().eq('room_code', roomCode); localStorage.removeItem(`schafkopf_owner_${roomCode}`); location.reload(); }}} className="text-xs text-red-900 hover:text-red-500 uppercase tracking-widest">Reset (Raum löschen)</button>}
+                    </footer>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
