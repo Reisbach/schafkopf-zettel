@@ -59,6 +59,7 @@
             const [points, setPoints] = useState('10');
             const [mode, setMode] = useState('normal'); 
             const [gameCount, setGameCount] = useState(0);
+            const [gameLogs, setGameLogs] = useState([]); // Speichert einzelne Runden-Ergebnisse für die Top 5
 
             // 1. Sicherheit: Warten bis Recharts im Browser bereit ist
             useEffect(() => {
@@ -71,7 +72,7 @@
                 return () => clearInterval(check);
             }, []);
 
-            // Realtime Synchronisation & Initialer DB-Pull (Ersetzt altes LocalStorage useEffect)
+            // Realtime Synchronisation & Initialer DB-Pull
             useEffect(() => {
                 if (!roomCode) return;
 
@@ -80,6 +81,7 @@
                     if (data) {
                         setGameCount(data.game_count);
                         setPlayers(data.players || []);
+                        setGameLogs(data.game_logs || []); // Falls Spalte existiert, sonst leeres Array via Migration/Metadaten oder JSON-Struktur
                         
                         const savedToken = localStorage.getItem(`schafkopf_owner_${roomCode}`);
                         setIsOwner(savedToken === data.owner_token);
@@ -92,18 +94,19 @@
                     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'schafkopf_sessions', filter: `room_code=eq.${roomCode}` }, (payload) => {
                         setGameCount(payload.new.game_count);
                         setPlayers(payload.new.players || []);
+                        setGameLogs(payload.new.game_logs || []);
                     })
                     .subscribe();
 
                 return () => { supabase.removeChannel(channel); };
             }, [roomCode]);
 
-            const saveToSupabase = async (nextPlayers, nextCount) => {
+            const saveToSupabase = async (nextPlayers, nextCount, nextLogs) => {
                 if (!isOwner || !roomCode) return;
                 const token = localStorage.getItem(`schafkopf_owner_${roomCode}`);
                 await supabase
                     .from('schafkopf_sessions')
-                    .update({ players: nextPlayers, game_count: nextCount })
+                    .update({ players: nextPlayers, game_count: nextCount, game_logs: nextLogs })
                     .eq('room_code', roomCode)
                     .eq('owner_token', token);
             };
@@ -111,7 +114,7 @@
             const handleCreateRoom = async () => {
                 const newCode = generateRoomCode();
                 const token = generateOwnerToken();
-                const { error } = await supabase.from('schafkopf_sessions').insert([{ room_code: newCode, game_count: 0, players: [], owner_token: token }]);
+                const { error } = await supabase.from('schafkopf_sessions').insert([{ room_code: newCode, game_count: 0, players: [], game_logs: [], owner_token: token }]);
                 if (!error) {
                     localStorage.setItem(`schafkopf_owner_${newCode}`, token);
                     setIsOwner(true);
@@ -147,7 +150,7 @@
                 }];
                 setPlayers(nextPlayers);
                 setName('');
-                saveToSupabase(nextPlayers, gameCount);
+                saveToSupabase(nextPlayers, gameCount, gameLogs);
             };
 
             const kickPlayer = (idx) => {
@@ -156,7 +159,7 @@
                     const nextPlayers = players.filter((_, i) => i !== idx);
                     setPlayers(nextPlayers);
                     setWinners([]); setLosers([]);
-                    saveToSupabase(nextPlayers, gameCount);
+                    saveToSupabase(nextPlayers, gameCount, gameLogs);
                 }
             };
 
@@ -197,6 +200,8 @@
                 }
 
                 const nextRound = gameCount + 1;
+                const roundLogs = []; // Temporäre Liste für die Top 5 dieser Runde
+
                 const newPlayers = players.map(p => {
                     let change = 0;
                     if (mode === 'normal') {
@@ -208,14 +213,22 @@
                         if (losers.length === 1 && losers.includes(p.name)) change = -(val * 3);
                         else if (losers.length === 1 && winners.includes(p.name)) change = val;
                     }
+                    
+                    if (change !== 0) {
+                        roundLogs.push({ name: p.name, change: change, round: nextRound, mode: mode });
+                    }
+
                     const newVal = p.points + change;
                     return { ...p, points: newVal, history: [...p.history, { round: nextRound, val: newVal }] };
                 });
 
+                const nextLogs = [...gameLogs, ...roundLogs];
+
                 setPlayers(newPlayers);
                 setGameCount(nextRound);
+                setGameLogs(nextLogs);
                 setWinners([]); setLosers([]);
-                saveToSupabase(newPlayers, nextRound);
+                saveToSupabase(newPlayers, nextRound, nextLogs);
             };
 
             const undoLast = () => {
@@ -228,13 +241,27 @@
                         history: p.history.filter(h => h.round <= prevRound),
                         points: (p.history.find(h => h.round === prevRound) || {val: 0}).val
                     }));
+
+                    const revertedLogs = gameLogs.filter(log => log.round <= prevRound);
+
                     setPlayers(revertedPlayers);
                     setGameCount(prevRound);
-                    saveToSupabase(revertedPlayers, prevRound);
+                    setGameLogs(revertedLogs);
+                    saveToSupabase(revertedPlayers, prevRound, revertedLogs);
                 }
             };
 
-            // LOBBYANZEIGE (WENN NOCH KEIN RAUM CODE GEWÄHLT IST)
+            // Berechnung der Top 5 Gewinne / Verluste
+            const topWins = [...gameLogs]
+                .filter(l => l.change > 0)
+                .sort((a, b) => b.change - a.change)
+                .slice(0, 5);
+
+            const topLosses = [...gameLogs]
+                .filter(l => l.change < 0)
+                .sort((a, b) => a.change - b.change) // am negativsten zuerst
+                .slice(0, 5);
+
             if (!roomCode) {
                 return (
                     <div class="max-w-md mx-auto mt-20 p-6 bg-slate-800/50 border border-white/5 rounded-3xl text-center shadow-xl space-y-6">
@@ -362,6 +389,49 @@
                                     ))}
                                 </LineChart>
                             </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {/* TOP 5 RECORD HIGHLIGHTS */}
+                    {gameLogs.length > 0 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+                            {/* TOP 5 GEWINNE */}
+                            <div className="bg-emerald-950/20 border border-emerald-500/10 p-6 rounded-[32px] shadow-xl space-y-4">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                                    <span>🏆</span> Top 5 Größte Gewinne
+                                </h3>
+                                <div className="space-y-2">
+                                    {topWins.length === 0 ? <p className="text-xs text-slate-500 italic">Noch keine Runden...</p> : topWins.map((log, index) => (
+                                        <div key={index} className="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-emerald-500/5">
+                                            <div className="text-xs">
+                                                <span className="font-mono text-slate-500 mr-2">#{index + 1}</span>
+                                                <span className="font-bold text-slate-200">{log.name}</span>
+                                                <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 uppercase font-semibold">R{log.round} - {log.mode}</span>
+                                            </div>
+                                            <span className="font-mono font-bold text-emerald-400">+{ (log.change / 100).toFixed(2) }€</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* TOP 5 VERLUSTE */}
+                            <div className="bg-red-950/20 border border-red-500/10 p-6 rounded-[32px] shadow-xl space-y-4">
+                                <h3 className="text-xs font-black uppercase tracking-widest text-red-400 flex items-center gap-2">
+                                    <span>💔</span> Top 5 Teuerste Verluste
+                                </h3>
+                                <div className="space-y-2">
+                                    {topLosses.length === 0 ? <p className="text-xs text-slate-500 italic">Noch keine Runden...</p> : topLosses.map((log, index) => (
+                                        <div key={index} className="flex justify-between items-center bg-slate-900/40 p-3 rounded-xl border border-red-500/5">
+                                            <div className="text-xs">
+                                                <span className="font-mono text-slate-500 mr-2">#{index + 1}</span>
+                                                <span className="font-bold text-slate-200">{log.name}</span>
+                                                <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 uppercase font-semibold">R{log.round} - {log.mode}</span>
+                                            </div>
+                                            <span className="font-mono font-bold text-red-400">{ (log.change / 100).toFixed(2) }€</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
