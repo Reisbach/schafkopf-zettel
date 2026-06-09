@@ -1,9 +1,322 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
-    <title>Test</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schafkopf Underground - Berlin Edition</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>test</h1>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // ==========================================
+        // SUPABASE KONFIGURATION (DEINE LIVE-DATEN)
+        // ==========================================
+        const SUPABASE_URL = "https://hutbxkqhhgetbvnuqwce.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_reklbPGGESN7V2aAL059xQ_ib3jopaQ"; 
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Hilfsfunktion: Generiert einen 6-stelligen Raum-Code
+        function generateRoomCode() {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let code = '';
+            for (let i = 0; i < 6; i++) {
+                code += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return code;
+        }
+
+        function SchafkopfApp() {
+            const [roomCode, setRoomCode] = React.useState("");
+            const [inputCode, setInputCode] = React.useState("");
+            const [gameState, setGameState] = React.useState({ game_count: 0, players: [] });
+            const [loading, setLoading] = React.useState(false);
+            const [newPlayerName, setNewPlayerName] = React.useState("");
+
+            // Echtzeit-Synchronisation mit Supabase
+            React.useEffect(() => {
+                if (!roomCode) return;
+
+                fetchCurrentState(roomCode);
+
+                const channel = supabase
+                    .channel(`public:schafkopf_sessions:room_code=eq.${roomCode}`)
+                    .on('postgres_changes', { 
+                        event: 'UPDATE', 
+                        schema: 'public', 
+                        table: 'schafkopf_sessions',
+                        filter: `room_code=eq.${roomCode}`
+                    }, (payload) => {
+                        setGameState({
+                            game_count: payload.new.game_count,
+                            players: payload.new.players
+                        });
+                    })
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(channel);
+                };
+            }, [roomCode]);
+
+            async function fetchCurrentState(code) {
+                setLoading(true);
+                const { data, error } = await supabase
+                    .from('schafkopf_sessions')
+                    .select('*')
+                    .eq('room_code', code)
+                    .maybeSingle();
+                
+                if (data) {
+                    setGameState({ game_count: data.game_count, players: data.players });
+                }
+                setLoading(false);
+            }
+
+            async function saveToSupabase(updatedPlayers, updatedCount) {
+                if (!roomCode) return;
+                await supabase
+                    .from('schafkopf_sessions')
+                    .update({ players: updatedPlayers, game_count: updatedCount })
+                    .eq('room_code', roomCode);
+            }
+
+            async function handleCreateRoom() {
+                setLoading(true);
+                const newCode = generateRoomCode();
+                const { error } = await supabase
+                    .from('schafkopf_sessions')
+                    .insert([{ room_code: newCode, game_count: 0, players: [] }]);
+
+                if (!error) {
+                    setRoomCode(newCode);
+                } else {
+                    alert("Fehler beim Erstellen des Raums. Bitte SQL-Befehl prüfen!");
+                }
+                setLoading(false);
+            }
+
+            async function handleJoinRoom(e) {
+                e.preventDefault();
+                const cleanCode = inputCode.trim().toLowerCase();
+                if (cleanCode.length !== 6) return;
+
+                setLoading(true);
+                const { data } = await supabase
+                    .from('schafkopf_sessions')
+                    .select('room_code')
+                    .eq('room_code', cleanCode)
+                    .maybeSingle();
+
+                if (data) {
+                    setRoomCode(cleanCode);
+                } else {
+                    alert("Raum-Code wurde im Untergrund nicht gefunden!");
+                }
+                setLoading(false);
+            }
+
+            function handleAddPlayer(e) {
+                e.preventDefault();
+                if (!newPlayerName.trim()) return;
+
+                const newPlayer = {
+                    name: newPlayerName.trim(),
+                    points: 0,
+                    history: [{ round: 0, val: 0 }]
+                };
+
+                const updatedPlayers = [...gameState.players, newPlayer];
+                setGameState(prev => ({ ...prev, players: updatedPlayers }));
+                setNewPlayerName("");
+                saveToSupabase(updatedPlayers, gameState.game_count);
+            }
+
+            // Test-Funktion für die Punkte-Mechanik
+            function handleAddPointsTest(index, amount) {
+                const updatedPlayers = gameState.players.map((player, i) => {
+                    if (i === index) {
+                        const nextPoints = player.points + amount;
+                        return {
+                            ...player,
+                            points: nextPoints,
+                            history: [...player.history, { round: player.history.length, val: nextPoints }]
+                        };
+                    }
+                    return player;
+                });
+
+                const nextGameCount = gameState.game_count + 1;
+                setGameState({ game_count: nextGameCount, players: updatedPlayers });
+                saveToSupabase(updatedPlayers, nextGameCount);
+            }
+
+            if (loading) {
+                return (
+                    <div class="flex items-center justify-center min-h-screen bg-slate-950">
+                        <p class="text-xl text-red-500 font-mono tracking-widest animate-pulse">VERBINDUNG ZUM UNTERGRUND WIRD AUFGEBAUT...</p>
+                    </div>
+                );
+            }
+
+            // LOBBY (STARTBILDSCHIRM)
+            if (!roomCode) {
+                return (
+                    <div class="max-w-md mx-auto mt-20 p-6 bg-slate-900 rounded-2xl shadow-2xl border border-red-900/30">
+                        <div class="text-center mb-8">
+                            <span class="text-xs font-bold tracking-widest text-red-500 uppercase bg-red-950/50 px-2 py-1 rounded border border-red-900/40">Berlin Edition</span>
+                            <h1 class="text-3xl font-extrabold text-white tracking-tight mt-3">Schafkopf Underground</h1>
+                        </div>
+                        
+                        <button 
+                            onClick={handleCreateRoom}
+                            class="w-full bg-red-700 hover:bg-red-600 active:bg-red-800 py-3 rounded-xl font-bold transition text-white tracking-wide shadow-lg shadow-red-900/20"
+                        >
+                            ➕ Neuen Spielraum erstellen
+                        </button>
+
+                        <div class="relative flex py-5 items-center">
+                            <div class="flex-grow border-t border-slate-800"></div>
+                            <span class="flex-shrink mx-4 text-slate-500 text-xs font-mono tracking-widest">ODER BEITRETEN</span>
+                            <div class="flex-grow border-t border-slate-800"></div>
+                        </div>
+
+                        <form onSubmit={handleJoinRoom}>
+                            <div class="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    maxLength="6"
+                                    value={inputCode}
+                                    onChange={(e) => setInputCode(e.target.value)}
+                                    placeholder="6-stelliger Code"
+                                    class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-center font-mono text-lg lowercase tracking-widest text-amber-400 focus:outline-none focus:border-red-700"
+                                />
+                                <button type="submit" class="bg-slate-800 hover:bg-slate-700 px-6 rounded-xl font-bold transition text-white border border-slate-700">
+                                    Go
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                );
+            }
+
+            // SPIELOBERFLÄCHE
+            return (
+                <div class="max-w-4xl mx-auto p-4">
+                    {/* Header */}
+                    <div class="flex flex-col sm:flex-row justify-between items-center bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-6 gap-4">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h1 class="text-xl font-black text-white uppercase tracking-tight">Schafkopf Underground</h1>
+                                <span class="text-[10px] bg-red-950 text-red-400 border border-red-950 px-1.5 py-0.5 rounded font-mono">BERLIN</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5 font-mono">Runden absolviert: <span class="text-white font-bold">{gameState.game_count}</span></p>
+                        </div>
+                        <div class="bg-slate-950 px-4 py-2 rounded-xl border border-slate-800 text-center sm:text-right min-w-[150px]">
+                            <span class="text-[10px] block text-slate-500 font-mono uppercase tracking-wider">Spätimeister Code</span>
+                            <span class="font-mono text-xl font-black text-amber-400 tracking-widest lowercase">
+                                {roomCode}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Steuerung & Tarifbereich */}
+                    <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 mb-6 flex flex-wrap gap-4 items-center justify-between">
+                        <form onSubmit={handleAddPlayer} class="flex gap-2 w-full md:w-auto md:flex-1 max-w-md">
+                            <input 
+                                type="text"
+                                value={newPlayerName}
+                                onChange={(e) => setNewPlayerName(e.target.value)}
+                                placeholder="Spieler Name..."
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-red-700"
+                            />
+                            <button type="submit" class="bg-red-700 hover:bg-red-600 px-4 rounded-xl font-bold text-xs whitespace-nowrap text-white transition">
+                                + Atze
+                            </button>
+                        </form>
+                        
+                        <div class="flex gap-2 text-xs font-mono">
+                            <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-slate-400 hover:text-white transition">Rückgängig</button>
+                            <button class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg text-red-500 hover:bg-red-950/30 transition">Reset</button>
+                        </div>
+                    </div>
+
+                    {/* Die Atzen (Spielerübersicht) */}
+                    <h2 class="text-xs font-bold font-mono tracking-widest uppercase text-slate-500 mb-3 px-1">Die Atzen am Tisch</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {gameState.players.length === 0 ? (
+                            <div class="text-slate-500 italic col-span-2 text-center py-12 bg-slate-900/50 rounded-2xl border border-dashed border-slate-800">
+                                Keine Atzen am Tisch. Trage oben die Spieler ein, um das Sauspiel zu starten!
+                            </div>
+                        ) : (
+                            gameState.players.map((player, index) => {
+                                const isBonze = player.points > 0;
+                                const isOpfer = player.points < 0;
+                                
+                                return (
+                                    <div key={index} class="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between shadow-md relative overflow-hidden">
+                                        {/* Status Tag */}
+                                        <div class="absolute top-2 right-2 flex gap-1">
+                                            {isBonze && <span class="text-[9px] font-mono uppercase bg-emerald-950 text-emerald-400 border border-emerald-900 px-1.5 py-0.5 rounded font-bold">Der Bonze</span>}
+                                            {isOpfer && <span class="text-[9px] font-mono uppercase bg-rose-950 text-rose-400 border border-rose-900 px-1.5 py-0.5 rounded font-bold">Opfer</span>}
+                                        </div>
+
+                                        <div class="mb-4">
+                                            <h3 class="text-base font-bold text-slate-300">{player.name}</h3>
+                                            <p class={`text-3xl font-mono font-black mt-1 ${player.points >= 0 ? 'text-emerald-400' : 'text-rose-500'}`}>
+                                                {player.points >= 0 ? `+${player.points}` : player.points} <span class="text-xs font-normal text-slate-500">€</span>
+                                            </p>
+                                        </div>
+
+                                        {/* Steuerung für diesen Spieler */}
+                                        <div class="border-t border-slate-950 pt-3 flex items-center justify-between gap-2">
+                                            <span class="text-[10px] font-mono text-slate-500 truncate max-w-[120px]">
+                                                Hst: {player.history.map(h => h.val).join(" ➔ ")}
+                                            </span>
+                                            <div class="flex gap-1">
+                                                <button 
+                                                    onClick={() => handleAddPointsTest(index, 5)}
+                                                    class="bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-900 text-emerald-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
+                                                >
+                                                    +5€
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleAddPointsTest(index, -5)}
+                                                    class="bg-rose-950/60 hover:bg-rose-900 border border-rose-900 text-rose-400 text-xs px-2.5 py-1 rounded-lg font-bold transition"
+                                                >
+                                                    -5€
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+
+                    <button 
+                        onClick={() => setRoomCode("")} 
+                        class="mt-12 text-xs font-mono text-slate-600 hover:text-red-500 transition block mx-auto text-center"
+                    >
+                        ⬅ Raum verlassen & zurück zum Späti
+                    </button>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // DIE FIX-ZEILE: RICHTIGES RENDERING FÜR REACT 18
+        // ==========================================
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SchafkopfApp />);
+    </script>
 </body>
 </html>
