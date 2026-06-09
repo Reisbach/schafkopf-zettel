@@ -419,7 +419,7 @@
                             {players.map((p, i) => (
                                 <Line 
                                     key={p.name} 
-                                    type="stepAfter" // <-- Das hier ändern
+                                    type="linear" // <-- Das hier ändern
                                     dataKey={p.name} 
                                     stroke={['#10b981', '#ef4444', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'][i % 6]} 
                                     strokeWidth={3} 
